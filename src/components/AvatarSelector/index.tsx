@@ -18,7 +18,7 @@ const FIXED_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
-  // 修复 TS6133: 这里移除了 avatarId，因为我们下面只用 FIXED_AVATAR_ID，不需要读取父组件传入的当前ID
+  // setAvatarId 用于设置 ID
   setAvatarId,
   avatars,
   setAvatars,
@@ -69,12 +69,12 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           <input
             type="text"
             value={FIXED_AVATAR_ID}
-            readOnly
-            disabled
+            readOnly={true}
+            disabled={true}
             className="avatar-select"
             style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', width: '100%' }}
           />
-          {/* 修复 TS17000: 确保 onClick 有值，并且 disabled 语法正确 */}
+          {/* 按钮部分：显式赋值避免 TS17000 错误 */}
           <button
             onClick={}
             disabled={isRefreshing || disabled}
