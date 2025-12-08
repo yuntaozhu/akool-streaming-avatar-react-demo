@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // 引入 useEffect
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -13,51 +13,29 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 1. 定义默认的 Custom Avatar ID
-const DEFAULT_CUSTOM_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
+// 定义固定的 Avatar ID
+const FIXED_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
-  avatarId,
+  avatarId, // 注意：虽然接收此 props，但我们会强制覆盖它
   setAvatarId,
   avatars,
   setAvatars,
   setAvatarVideoUrl,
   disabled = false,
 }) => {
-  const [useManualAvatarId, setUseManualAvatarId] = useState(false);
+  // 仅保留刷新状态用于内部逻辑，移除了 manual 切换状态
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 2. 新增逻辑：组件挂载或列表更新时，确保默认选中指定 ID 并同步视频 URL
-  useEffect(() => {
-    // 如果当前 ID 为空或不是我们想要的默认 ID，强制设置为默认 ID
-    if (avatarId !== DEFAULT_CUSTOM_AVATAR_ID) {
-      setAvatarId(DEFAULT_CUSTOM_AVATAR_ID);
-    }
-
-    // 在头像列表(avatars)中查找该 ID，如果找到，自动设置对应的视频 URL
-    // 这一步是为了保证默认选中的数字人能正确显示画面
-    if (avatars.length > 0) {
-      const defaultAvatar = avatars.find(a => a.avatar_id === DEFAULT_CUSTOM_AVATAR_ID);
-      if (defaultAvatar) {
-        // 只有当 URL 不一致时才更新，防止死循环（虽然 setAvatarVideoUrl 通常是安全的）
-        setAvatarVideoUrl(defaultAvatar.url);
-        logger.info('Set default custom avatar video url', { url: defaultAvatar.url });
-      }
-    }
-  }, [avatars, avatarId, setAvatarId, setAvatarVideoUrl]);
-
+  // 保持获取列表的逻辑，为了能匹配到 ID 对应的 Video URL
   const refreshAvatarList = async () => {
-    if (!api || isRefreshing || refreshCooldown) return;
+    if (!api || isRefreshing) return; // 移除了 cooldown 限制以便初始化能顺利执行
 
     setIsRefreshing(true);
     try {
       const avatarList = await api.getAvatarList();
       setAvatars(avatarList);
-
-      setRefreshCooldown(true);
-      setTimeout(() => setRefreshCooldown(false), 5000);
     } catch (error) {
       logger.error('Error refreshing avatar list', { error });
     } finally {
@@ -65,81 +43,48 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   };
 
-  const handleAvatarChange = (newAvatarId: string) => {
-    setAvatarId(newAvatarId);
-    const avatar = avatars.find((a) => a.avatar_id === newAvatarId);
-    if (avatar) {
-      logger.info('Update avatar video url', { url: avatar.url });
-      setAvatarVideoUrl(avatar.url);
+  // 新增：初始化副作用
+  // 1. 强制设置 Avatar ID
+  // 2. 如果没有列表数据，自动拉取一次
+  useEffect(() => {
+    setAvatarId(FIXED_AVATAR_ID);
+    if (avatars.length === 0) {
+      refreshAvatarList();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api]); // 依赖项简化，确保挂载时执行
+
+  // 新增：监听列表变化，自动设置对应的 Video URL
+  useEffect(() => {
+    const targetAvatar = avatars.find((a) => a.avatar_id === FIXED_AVATAR_ID);
+    if (targetAvatar) {
+      logger.info('Auto-set fixed avatar video url', { url: targetAvatar.url });
+      setAvatarVideoUrl(targetAvatar.url);
+    }
+  }, [avatars, setAvatarVideoUrl]);
 
   return (
     <div>
       <label>
-        Avatar:
+        Avatar (Fixed):
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {!useManualAvatarId ? (
-            <>
-              <select
-                value={avatarId}
-                onChange={(e) => handleAvatarChange(e.target.value)}
-                disabled={!avatars.length || disabled}
-                className="avatar-select"
-              >
-                <option value="">Select an avatar</option>
-                <optgroup label="Official Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from !== 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="Custom Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from === 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-              <button
-                /* 3. 修复了这里：补全了 onClick 事件处理函数 */
-                onClick={}
-                disabled={isRefreshing || refreshCooldown || disabled}
-                className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
-                title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
-              >
-                <span className={`material-icons ${isRefreshing ? 'spinning' : ''}`}>refresh</span>
-              </button>
-            </>
-          ) : (
-            <input
-              type="text"
-              value={avatarId}
-              onChange={(e) => handleAvatarChange(e.target.value)}
-              placeholder="Enter avatar ID"
-              disabled={disabled}
-            />
-          )}
+          {/* 强制显示固定 ID 的输入框，并设为禁用状态 */}
+          <input
+            type="text"
+            value={FIXED_AVATAR_ID}
+            readOnly
+            disabled={true} 
+            className="avatar-select" // 保持原有样式类名
+            style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', width: '100%' }}
+          />
+          {/* 保留刷新按钮，万一网络问题导致没获取到 URL，可以手动重试，但通常不需要 */}
           <button
-            onClick={() => setUseManualAvatarId(!useManualAvatarId)}
-            className="icon-button"
-            title={useManualAvatarId ? 'Switch to dropdown' : 'Switch to manual input'}
+            onClick={}
+            disabled={isRefreshing || disabled}
+            className={`icon-button ${isRefreshing || disabled ? 'disabled' : ''}`}
+            title="Reload avatar data"
           >
-            <span className="material-icons">{useManualAvatarId ? 'list' : 'edit'}</span>
+            <span className={`material-icons ${isRefreshing ? 'spinning' : ''}`}>refresh</span>
           </button>
         </div>
       </label>
