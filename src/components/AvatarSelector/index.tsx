@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // 引入 useEffect
+import React, { useState, useEffect } from 'react';
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -18,19 +18,18 @@ const FIXED_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
-  avatarId, // 注意：虽然接收此 props，但我们会强制覆盖它
+  // 修复 TS6133: 这里移除了 avatarId，因为我们下面只用 FIXED_AVATAR_ID，不需要读取父组件传入的当前ID
   setAvatarId,
   avatars,
   setAvatars,
   setAvatarVideoUrl,
   disabled = false,
 }) => {
-  // 仅保留刷新状态用于内部逻辑，移除了 manual 切换状态
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 保持获取列表的逻辑，为了能匹配到 ID 对应的 Video URL
+  // 保持获取列表逻辑，用于匹配 Video URL
   const refreshAvatarList = async () => {
-    if (!api || isRefreshing) return; // 移除了 cooldown 限制以便初始化能顺利执行
+    if (!api || isRefreshing) return;
 
     setIsRefreshing(true);
     try {
@@ -43,18 +42,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   };
 
-  // 新增：初始化副作用
-  // 1. 强制设置 Avatar ID
-  // 2. 如果没有列表数据，自动拉取一次
+  // 初始化副作用：强制设置 ID 并拉取数据
   useEffect(() => {
     setAvatarId(FIXED_AVATAR_ID);
     if (avatars.length === 0) {
       refreshAvatarList();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]); // 依赖项简化，确保挂载时执行
+  }, [api]); 
 
-  // 新增：监听列表变化，自动设置对应的 Video URL
+  // 监听列表变化，自动设置 Video URL
   useEffect(() => {
     const targetAvatar = avatars.find((a) => a.avatar_id === FIXED_AVATAR_ID);
     if (targetAvatar) {
@@ -68,16 +65,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       <label>
         Avatar (Fixed):
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* 强制显示固定 ID 的输入框，并设为禁用状态 */}
+          {/* 强制显示固定 ID 的输入框 */}
           <input
             type="text"
             value={FIXED_AVATAR_ID}
             readOnly
-            disabled={true} 
-            className="avatar-select" // 保持原有样式类名
+            disabled
+            className="avatar-select"
             style={{ backgroundColor: '#f0f0f0', cursor: 'not-allowed', width: '100%' }}
           />
-          {/* 保留刷新按钮，万一网络问题导致没获取到 URL，可以手动重试，但通常不需要 */}
+          {/* 修复 TS17000: 确保 onClick 有值，并且 disabled 语法正确 */}
           <button
             onClick={}
             disabled={isRefreshing || disabled}
