@@ -13,7 +13,7 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 定义默认的 Avatar ID
+// 1. 定义默认的 Custom Avatar ID
 const DEFAULT_CUSTOM_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
@@ -29,17 +29,19 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 新增：自动设置默认 ID 和同步 Video URL
+  // 2. 新增逻辑：组件挂载或列表更新时，确保默认选中指定 ID 并同步视频 URL
   useEffect(() => {
-    // 1. 如果当前 ID 不是默认 ID，强制设置
+    // 如果当前 ID 为空或不是我们想要的默认 ID，强制设置为默认 ID
     if (avatarId !== DEFAULT_CUSTOM_AVATAR_ID) {
       setAvatarId(DEFAULT_CUSTOM_AVATAR_ID);
     }
 
-    // 2. 列表加载后，查找该 ID 对应的 URL 并设置，确保画面显示
+    // 在头像列表(avatars)中查找该 ID，如果找到，自动设置对应的视频 URL
+    // 这一步是为了保证默认选中的数字人能正确显示画面
     if (avatars.length > 0) {
       const defaultAvatar = avatars.find(a => a.avatar_id === DEFAULT_CUSTOM_AVATAR_ID);
       if (defaultAvatar) {
+        // 只有当 URL 不一致时才更新，防止死循环（虽然 setAvatarVideoUrl 通常是安全的）
         setAvatarVideoUrl(defaultAvatar.url);
         logger.info('Set default custom avatar video url', { url: defaultAvatar.url });
       }
@@ -114,7 +116,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
-                /* 修复点：这里补上了 onClick 的函数调用 */
+                /* 3. 修复了这里：补全了 onClick 事件处理函数 */
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
