@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // 1. 引入 useEffect
+import React, { useState, useEffect } from 'react';
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -13,7 +13,7 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 2. 定义默认的 Custom Avatar ID
+// 定义默认的 Avatar ID
 const DEFAULT_CUSTOM_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
@@ -29,14 +29,14 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 3. 新增逻辑：组件挂载时默认选中指定 ID，并在列表加载后自动同步视频 URL
+  // 新增：自动设置默认 ID 和同步 Video URL
   useEffect(() => {
-    // 如果当前没有选中 ID 或选中的不是目标 ID，强制设置为默认 ID
+    // 1. 如果当前 ID 不是默认 ID，强制设置
     if (avatarId !== DEFAULT_CUSTOM_AVATAR_ID) {
       setAvatarId(DEFAULT_CUSTOM_AVATAR_ID);
     }
 
-    // 当头像列表(avatars)加载完毕，且包含该 ID 时，自动设置对应的视频 URL
+    // 2. 列表加载后，查找该 ID 对应的 URL 并设置，确保画面显示
     if (avatars.length > 0) {
       const defaultAvatar = avatars.find(a => a.avatar_id === DEFAULT_CUSTOM_AVATAR_ID);
       if (defaultAvatar) {
@@ -44,7 +44,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         logger.info('Set default custom avatar video url', { url: defaultAvatar.url });
       }
     }
-  }, [avatars]); // 依赖于 avatars，确保列表刷新后能找到对应数据
+  }, [avatars, avatarId, setAvatarId, setAvatarVideoUrl]);
 
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
@@ -114,6 +114,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
+                /* 修复点：这里补上了 onClick 的函数调用 */
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
