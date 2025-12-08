@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // 1. 引入 useEffect
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -6,15 +6,15 @@ import './styles.css';
 interface AvatarSelectorProps {
   api: ApiService | null | undefined;
   avatarId: string;
-  setAvatarId: (id:string) => void;
+  setAvatarId: (id: string) => void;
   avatars: Avatar[];
   setAvatars: (avatars: Avatar[]) => void;
   setAvatarVideoUrl: (url: string) => void;
   disabled?: boolean;
 }
 
-// 将指定的默认 Avatar ID 定义为常量
-export const DEFAULT_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
+// 2. 定义默认的 Custom Avatar ID
+const DEFAULT_CUSTOM_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
@@ -28,39 +28,23 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [useManualAvatarId, setUseManualAvatarId] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
-  
-  // 使用 useMemo 来合并传入的 avatars 列表和我们指定的默认 avatar
-  // 这样可以确保指定的 avatar 总是存在于列表中，并且避免在每次渲染时都重新计算
-  const combinedAvatars = useMemo(() => {
-    const customAvatarExists = avatars.some(a => a.avatar_id === DEFAULT_AVATAR_ID);
-    
-    // 如果 API 返回的列表中不包含这个 avatar，我们就手动添加一个
-    if (!customAvatarExists) {
-      const defaultCustomAvatar: Avatar = {
-        avatar_id: DEFAULT_AVATAR_ID,
-        name: 'Default Custom (Ydgl3krd)', // 给它一个清晰的名字
-        available: true, // 假设它是可用的
-        from: 3, // 确保它出现在 "Custom Avatars" 组中
-        url: '', // URL 需要在选中时或从 API 获取后填充
-      };
-      return [...avatars, defaultCustomAvatar];
-    }
-    
-    return avatars;
-  }, [avatars]);
 
-  // 使用 useEffect 来处理组件加载时的默认值
-  // 当 avatarId 或 avatars 列表变化时，确保视频 URL 被正确设置
+  // 3. 新增逻辑：组件挂载时默认选中指定 ID，并在列表加载后自动同步视频 URL
   useEffect(() => {
-    if (avatarId) {
-      const avatar = combinedAvatars.find((a) => a.avatar_id === avatarId);
-      if (avatar && avatar.url) { // 只有在 avatar 有 url 时才更新
-        logger.info('Update avatar video url on load/change', { url: avatar.url });
-        setAvatarVideoUrl(avatar.url);
+    // 如果当前没有选中 ID 或选中的不是目标 ID，强制设置为默认 ID
+    if (avatarId !== DEFAULT_CUSTOM_AVATAR_ID) {
+      setAvatarId(DEFAULT_CUSTOM_AVATAR_ID);
+    }
+
+    // 当头像列表(avatars)加载完毕，且包含该 ID 时，自动设置对应的视频 URL
+    if (avatars.length > 0) {
+      const defaultAvatar = avatars.find(a => a.avatar_id === DEFAULT_CUSTOM_AVATAR_ID);
+      if (defaultAvatar) {
+        setAvatarVideoUrl(defaultAvatar.url);
+        logger.info('Set default custom avatar video url', { url: defaultAvatar.url });
       }
     }
-  }, [avatarId, combinedAvatars, setAvatarVideoUrl]);
-
+  }, [avatars]); // 依赖于 avatars，确保列表刷新后能找到对应数据
 
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
@@ -81,8 +65,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   const handleAvatarChange = (newAvatarId: string) => {
     setAvatarId(newAvatarId);
-    const avatar = combinedAvatars.find((a) => a.avatar_id === newAvatarId);
-    if (avatar && avatar.url) {
+    const avatar = avatars.find((a) => a.avatar_id === newAvatarId);
+    if (avatar) {
       logger.info('Update avatar video url', { url: avatar.url });
       setAvatarVideoUrl(avatar.url);
     }
@@ -98,12 +82,12 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                disabled={!combinedAvatars.length || disabled}
+                disabled={!avatars.length || disabled}
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
                 <optgroup label="Official Avatars">
-                  {combinedAvatars
+                  {avatars
                     .filter((avatar) => avatar.from !== 3)
                     .map((avatar, index) => (
                       <option
@@ -116,7 +100,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
                 <optgroup label="Custom Avatars">
-                  {combinedAvatars
+                  {avatars
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
                       <option
