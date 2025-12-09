@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // 1. 引入 useEffect
+import React, { useState } from 'react';
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -13,6 +13,9 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
+// 1. 定义你的私有 Avatar ID
+const PRIVATE_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
+
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   avatarId,
@@ -25,39 +28,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [useManualAvatarId, setUseManualAvatarId] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
-
-  // =================================================================
-  // 新增功能：系统加载时默认选中指定 Avatar ID
-  // =================================================================
-  useEffect(() => {
-    const targetId = 'Ydgl3krdKDIruU6QiSxS6';
-
-    // 1. 设置 ID
-    // 只有当当前 ID 不等于目标 ID 时才设置，避免重复渲染
-    if (avatarId !== targetId) {
-       setAvatarId(targetId);
-    }
-
-    // 2. 同步设置视频 URL
-    // 我们需要在 avatars 列表中查找该 ID 对应的 URL
-    if (avatars && avatars.length > 0) {
-      const targetAvatar = avatars.find((a) => a.avatar_id === targetId);
-      
-      if (targetAvatar) {
-        logger.info('Auto-selecting default avatar', { 
-          id: targetId, 
-          url: targetAvatar.url 
-        });
-        setAvatarVideoUrl(targetAvatar.url);
-      }
-    }
-    
-    // 依赖项包含 avatars：
-    // 这样即使组件刚加载时 avatars 列表是空的，等 api 加载完列表后，
-    // 这个 effect 会再次运行，从而正确找到并设置 Video URL。
-  }, [avatars, setAvatarId, setAvatarVideoUrl]); 
-  // =================================================================
-
 
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
@@ -78,6 +48,15 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   const handleAvatarChange = (newAvatarId: string) => {
     setAvatarId(newAvatarId);
+
+    // 2. 特殊处理：如果是私有 ID，手动设置相关信息（如果 API 列表里没有它）
+    if (newAvatarId === PRIVATE_AVATAR_ID) {
+        logger.info('Selected Private Avatar', { id: newAvatarId });
+        // 如果你有这个私有数字人的预览视频 URL，可以在这里手动设置
+        // setAvatarVideoUrl('https://your-private-avatar-url.mp4'); 
+        return; 
+    }
+
     const avatar = avatars.find((a) => a.avatar_id === newAvatarId);
     if (avatar) {
       logger.info('Update avatar video url', { url: avatar.url });
@@ -95,10 +74,19 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                disabled={!avatars.length || disabled}
+                // 注意：这里移除了 !avatars.length 的禁用判断，确保即使列表为空也能选私有的
+                disabled={disabled} 
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
+                
+                {/* 3. 手动注入私有 Avatar 选项 */}
+                <optgroup label="Private / Custom">
+                    <option value={PRIVATE_AVATAR_ID} className="available">
+                        🔒 Custom Avatar ({PRIVATE_AVATAR_ID})
+                    </option>
+                </optgroup>
+
                 <optgroup label="Official Avatars">
                   {avatars
                     .filter((avatar) => avatar.from !== 3)
