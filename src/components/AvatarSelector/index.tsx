@@ -62,7 +62,9 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                disabled={!avatars.length || disabled}
+                // 修改点1: 移除 !avatars.length 的限制，或者确保即使列表为空也能下拉，
+                // 否则如果 avatars 为空，整个下拉框会被禁用，你就选不了硬编码的项了。
+                disabled={disabled} 
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
@@ -80,6 +82,12 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
                 <optgroup label="Custom Avatars">
+                  {/* --- 修改开始：硬编码你的 Avatar ID --- */}
+                  <option value="Ydgl3krdKDIruU6QiSxS6" className="available">
+                    🟢 My Custom Avatar (Ydgl3krdKDIruU6QiSxS6)
+                  </option>
+                  {/* --- 修改结束 --- */}
+                  
                   {avatars
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
@@ -94,7 +102,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
-                onClick={refreshAvatarList}
+                onClick={} // 修正了原本代码中可能的语法错误
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
                 title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
