@@ -1,146 +1,39 @@
-import React, { useState } from 'react';
-import { Avatar, ApiService } from '../../apiService';
-import { logger } from '../../core/Logger';
-import './styles.css';
+import React, { useEffect } from 'react';
+// 注意：请根据实际情况确认 configurationStore 的导入路径
+import { useConfigurationStore } from '../../stores/configurationStore'; 
 
-interface AvatarSelectorProps {
-  api: ApiService | null | undefined;
-  avatarId: string;
-  setAvatarId: (id: string) => void;
-  avatars: Avatar[];
-  setAvatars: (avatars: Avatar[]) => void;
-  setAvatarVideoUrl: (url: string) => void;
-  disabled?: boolean;
-}
+// 定义您的 Custom Avatar ID
+const CUSTOM_AVATAR_ID = "KW3VZF-FccCBAuAZmEws8";
 
-// 定义你的私有 Avatar ID
-const PRIVATE_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
+const AvatarSelector: React.FC = () => {
+  // 从 Store 中获取设置 Avatar ID 的方法
+  // 注意：如果是 useStreamingContext，请改为从 Context 获取
+  const { setAvatarId, avatarId } = useConfigurationStore();
 
-const AvatarSelector: React.FC<AvatarSelectorProps> = ({
-  api,
-  avatarId,
-  setAvatarId,
-  avatars,
-  setAvatars,
-  setAvatarVideoUrl,
-  disabled = false,
-}) => {
-  const [useManualAvatarId, setUseManualAvatarId] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshCooldown, setRefreshCooldown] = useState(false);
-
-  const refreshAvatarList = async () => {
-    if (!api || isRefreshing || refreshCooldown) return;
-
-    setIsRefreshing(true);
-    try {
-      const avatarList = await api.getAvatarList();
-      setAvatars(avatarList);
-
-      setRefreshCooldown(true);
-      setTimeout(() => setRefreshCooldown(false), 5000);
-    } catch (error) {
-      logger.error('Error refreshing avatar list', { error });
-    } finally {
-      setIsRefreshing(false);
+  useEffect(() => {
+    // 组件加载时，强制设置为您指定的 Avatar ID
+    if (avatarId !== CUSTOM_AVATAR_ID) {
+      console.log(`[AvatarSelector] Forcing custom avatar: ${CUSTOM_AVATAR_ID}`);
+      setAvatarId(CUSTOM_AVATAR_ID);
     }
-  };
+  }, [setAvatarId, avatarId]);
 
-  const handleAvatarChange = (newAvatarId: string) => {
-    setAvatarId(newAvatarId);
-
-    // 特殊处理：如果是私有 ID，直接跳过查找 url 的逻辑，或者手动设置
-    if (newAvatarId === PRIVATE_AVATAR_ID) {
-        logger.info('Selected Private Avatar', { id: newAvatarId });
-        return; 
-    }
-
-    const avatar = avatars.find((a) => a.avatar_id === newAvatarId);
-    if (avatar) {
-      logger.info('Update avatar video url', { url: avatar.url });
-      setAvatarVideoUrl(avatar.url);
-    }
-  };
-
+  // 返回一个简单的 UI，提示当前正在使用的 Avatar
+  // 我们屏蔽了原本的列表渲染，确保不会切换到其他 Avatar
   return (
-    <div>
-      <label>
-        Avatar:
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {!useManualAvatarId ? (
-            <>
-              <select
-                value={avatarId}
-                onChange={(e) => handleAvatarChange(e.target.value)}
-                // 移除了 !avatars.length 的判断，确保列表为空时也能选私有的
-                disabled={disabled}
-                className="avatar-select"
-              >
-                <option value="">Select an avatar</option>
-                
-                {/* 手动注入私有 Avatar 选项 */}
-                <optgroup label="Private / Custom">
-                    <option value={PRIVATE_AVATAR_ID} className="available">
-                        🔒 Custom Avatar ({PRIVATE_AVATAR_ID})
-                    </option>
-                </optgroup>
-
-                <optgroup label="Official Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from !== 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="Custom Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from === 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-              
-              {/* 修复点：这里添加了 onClick={} */}
-              <button
-                onClick={}
-                disabled={isRefreshing || refreshCooldown || disabled}
-                className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
-                title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
-              >
-                <span className={`material-icons ${isRefreshing ? 'spinning' : ''}`}>refresh</span>
-              </button>
-            </>
-          ) : (
-            <input
-              type="text"
-              value={avatarId}
-              onChange={(e) => handleAvatarChange(e.target.value)}
-              placeholder="Enter avatar ID"
-              disabled={disabled}
-            />
-          )}
-          <button
-            onClick={() => setUseManualAvatarId(!useManualAvatarId)}
-            className="icon-button"
-            title={useManualAvatarId ? 'Switch to dropdown' : 'Switch to manual input'}
-          >
-            <span className="material-icons">{useManualAvatarId ? 'list' : 'edit'}</span>
-          </button>
+    <div className="w-full p-4 border border-blue-200 bg-blue-50 rounded-lg shadow-sm">
+      <div className="flex items-center space-x-3">
+        <div className="h-10 w-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+          A
         </div>
-      </label>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Custom Avatar Active</h3>
+          <p className="text-xs text-gray-500 font-mono">{CUSTOM_AVATAR_ID}</p>
+        </div>
+      </div>
+      <div className="mt-2 text-xs text-blue-600">
+        ✅ 系统已锁定使用此 Avatar 进行播报
+      </div>
     </div>
   );
 };
