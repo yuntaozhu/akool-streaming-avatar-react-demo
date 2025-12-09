@@ -1,15 +1,14 @@
 import React, { useEffect } from 'react';
 
-// 为了防止引入找不到类型的错误，这里对复杂类型暂时使用 any
-// 这样可以确保 build 一定能通过
+// 保持接口定义不变，以满足父组件传参的类型检查
 interface AvatarSelectorProps {
-  api: any;             // 父组件传来的 api 实例
-  avatarId: string;     // 当前选中的 id
-  setAvatarId: (avatarId: string) => void; // 设置 id 的方法
-  avatars: any[];       // 头像列表
-  setAvatars: any;      // 设置头像列表的方法
-  setAvatarVideoUrl?: any; // 可选
-  disabled?: boolean;   // 是否禁用
+  api: any;
+  avatarId: string;
+  setAvatarId: (avatarId: string) => void;
+  avatars: any[];
+  setAvatars: any;
+  setAvatarVideoUrl?: any;
+  disabled?: boolean;
 }
 
 // 您指定的 Custom Avatar ID
@@ -18,15 +17,13 @@ const CUSTOM_AVATAR_ID = "KW3VZF-FccCBAuAZmEws8";
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   setAvatarId,
   avatarId,
-  // 下面这些 props 是父组件传进来的，我们接收它们以消除 TS 报错，
-  // 但我们在逻辑中并不真正使用它们去拉取列表。
-  api, 
-  avatars,
   disabled
+  // api,      <-- 移除了这些未使用的变量
+  // avatars,  <-- 移除了这些未使用的变量
 }) => {
 
   useEffect(() => {
-    // 核心逻辑：一旦组件加载或 ID 变动，强制将其“纠正”为您指定的 ID
+    // 核心逻辑：强制锁定 ID
     if (avatarId !== CUSTOM_AVATAR_ID) {
       console.log(`[AvatarSelector] Enforcing custom avatar: ${CUSTOM_AVATAR_ID}`);
       setAvatarId(CUSTOM_AVATAR_ID);
@@ -35,7 +32,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   return (
     <div className="w-full">
-      {/* 这里是一个静态的 UI，展示当前强制使用的 Avatar 信息 */}
       <div className={`p-4 border rounded-lg shadow-sm transition-colors ${
         disabled ? 'bg-gray-100 border-gray-200' : 'bg-blue-50 border-blue-200'
       }`}>
@@ -53,7 +49,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           </div>
         </div>
         
-        {/* 状态提示 */}
         <div className="mt-3 flex items-center text-xs text-blue-700 font-medium">
           <span className="flex h-2 w-2 relative mr-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
