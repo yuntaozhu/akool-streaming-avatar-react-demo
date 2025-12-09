@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // 1. 引入 useEffect
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -26,7 +26,39 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 刷新列表函数
+  // =================================================================
+  // 新增功能：系统加载时默认选中指定 Avatar ID
+  // =================================================================
+  useEffect(() => {
+    const targetId = 'Ydgl3krdKDIruU6QiSxS6';
+
+    // 1. 设置 ID
+    // 只有当当前 ID 不等于目标 ID 时才设置，避免重复渲染
+    if (avatarId !== targetId) {
+       setAvatarId(targetId);
+    }
+
+    // 2. 同步设置视频 URL
+    // 我们需要在 avatars 列表中查找该 ID 对应的 URL
+    if (avatars && avatars.length > 0) {
+      const targetAvatar = avatars.find((a) => a.avatar_id === targetId);
+      
+      if (targetAvatar) {
+        logger.info('Auto-selecting default avatar', { 
+          id: targetId, 
+          url: targetAvatar.url 
+        });
+        setAvatarVideoUrl(targetAvatar.url);
+      }
+    }
+    
+    // 依赖项包含 avatars：
+    // 这样即使组件刚加载时 avatars 列表是空的，等 api 加载完列表后，
+    // 这个 effect 会再次运行，从而正确找到并设置 Video URL。
+  }, [avatars, setAvatarId, setAvatarVideoUrl]); 
+  // =================================================================
+
+
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
 
@@ -63,17 +95,10 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                /* 
-                   【修复点 1】：逻辑修正
-                   移除了 !avatars.length 的判断。
-                   这样做是为了防止 API 返回空列表时下拉框被禁用，导致无法选择下方硬编码的自定义选项。
-                */
-                disabled={disabled}
+                disabled={!avatars.length || disabled}
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
-                
-                {/* 官方数字人分组 */}
                 <optgroup label="Official Avatars">
                   {avatars
                     .filter((avatar) => avatar.from !== 3)
@@ -87,18 +112,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                       </option>
                     ))}
                 </optgroup>
-
-                {/* 自定义数字人分组 */}
                 <optgroup label="Custom Avatars">
-                  {/* 
-                      【修复点 2】：添加硬编码选项
-                      在这里手动添加了你指定的 Avatar ID，即使 API 没返回它也会显示。
-                  */}
-                  <option value="Ydgl3krdKDIruU6QiSxS6" className="available">
-                    🟢 My Custom Avatar (Ydgl3krdKDIruU6QiSxS6)
-                  </option>
-                  
-                  {/*原本的列表渲染逻辑保持不变*/}
                   {avatars
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
@@ -112,13 +126,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
               </select>
-
               <button
-                /* 
-                   【修复点 3】：语法修复 (关键)
-                   原代码此处为 "onClick=" (空的)，导致了 TS17000 和 TS6133 报错。
-                   现已补全为 "onClick={}"。
-                */
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
