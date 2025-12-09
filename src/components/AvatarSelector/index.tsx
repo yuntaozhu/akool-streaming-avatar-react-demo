@@ -62,10 +62,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                /* 
-                   修改说明 1: 移除了 !avatars.length 检查。
-                   否则如果 API 返回空列表，下拉框会被禁用，你就无法选择下面硬编码的 ID 了。
-                */
+                // 修复1: 移除了 !avatars.length 判断，防止因为列表为空导致无法选择已硬编码的项
                 disabled={disabled}
                 className="avatar-select"
               >
@@ -84,11 +81,11 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
                 <optgroup label="Custom Avatars">
-                  {/* 修改说明 2: 硬编码你的 Avatar ID */}
+                  {/* 修复2: 硬编码加入你的 Avatar ID */}
                   <option value="Ydgl3krdKDIruU6QiSxS6" className="available">
                     🟢 My Custom Avatar (Ydgl3krdKDIruU6QiSxS6)
                   </option>
-                  
+
                   {avatars
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
@@ -103,7 +100,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
-                /* 修改说明 3: 这里修复了报错 TS17000 和 TS6133，补全了 onClick 事件 */
+                // 修复3: 这里补全了 onClick 事件，解决了 TS17000 和 TS6133 报错
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
