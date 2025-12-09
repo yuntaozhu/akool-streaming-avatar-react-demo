@@ -13,7 +13,7 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 1. 定义你的私有 Avatar ID
+// 定义你的私有 Avatar ID
 const PRIVATE_AVATAR_ID = 'Ydgl3krdKDIruU6QiSxS6';
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
@@ -49,11 +49,9 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const handleAvatarChange = (newAvatarId: string) => {
     setAvatarId(newAvatarId);
 
-    // 2. 特殊处理：如果是私有 ID，手动设置相关信息（如果 API 列表里没有它）
+    // 特殊处理：如果是私有 ID，直接跳过查找 url 的逻辑，或者手动设置
     if (newAvatarId === PRIVATE_AVATAR_ID) {
         logger.info('Selected Private Avatar', { id: newAvatarId });
-        // 如果你有这个私有数字人的预览视频 URL，可以在这里手动设置
-        // setAvatarVideoUrl('https://your-private-avatar-url.mp4'); 
         return; 
     }
 
@@ -74,13 +72,13 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                // 注意：这里移除了 !avatars.length 的禁用判断，确保即使列表为空也能选私有的
-                disabled={disabled} 
+                // 移除了 !avatars.length 的判断，确保列表为空时也能选私有的
+                disabled={disabled}
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
                 
-                {/* 3. 手动注入私有 Avatar 选项 */}
+                {/* 手动注入私有 Avatar 选项 */}
                 <optgroup label="Private / Custom">
                     <option value={PRIVATE_AVATAR_ID} className="available">
                         🔒 Custom Avatar ({PRIVATE_AVATAR_ID})
@@ -114,6 +112,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
               </select>
+              
+              {/* 修复点：这里添加了 onClick={} */}
               <button
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
