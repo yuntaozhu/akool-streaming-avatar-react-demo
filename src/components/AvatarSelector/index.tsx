@@ -26,6 +26,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
+  // 刷新列表函数
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
 
@@ -62,11 +63,17 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               <select
                 value={avatarId}
                 onChange={(e) => handleAvatarChange(e.target.value)}
-                // 修复点1: 移除了 !avatars.length，防止列表为空时禁用下拉框
+                /* 
+                   【修复点 1】：逻辑修正
+                   移除了 !avatars.length 的判断。
+                   这样做是为了防止 API 返回空列表时下拉框被禁用，导致无法选择下方硬编码的自定义选项。
+                */
                 disabled={disabled}
                 className="avatar-select"
               >
                 <option value="">Select an avatar</option>
+                
+                {/* 官方数字人分组 */}
                 <optgroup label="Official Avatars">
                   {avatars
                     .filter((avatar) => avatar.from !== 3)
@@ -80,12 +87,18 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                       </option>
                     ))}
                 </optgroup>
+
+                {/* 自定义数字人分组 */}
                 <optgroup label="Custom Avatars">
-                  {/* 修复点2: 硬编码你的自定义 Avatar */}
+                  {/* 
+                      【修复点 2】：添加硬编码选项
+                      在这里手动添加了你指定的 Avatar ID，即使 API 没返回它也会显示。
+                  */}
                   <option value="Ydgl3krdKDIruU6QiSxS6" className="available">
                     🟢 My Custom Avatar (Ydgl3krdKDIruU6QiSxS6)
                   </option>
                   
+                  {/*原本的列表渲染逻辑保持不变*/}
                   {avatars
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
@@ -99,8 +112,13 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
               </select>
+
               <button
-                // 修复点3: 加上了 {}，解决了 TS17000 和 TS6133 报错
+                /* 
+                   【修复点 3】：语法修复 (关键)
+                   原代码此处为 "onClick=" (空的)，导致了 TS17000 和 TS6133 报错。
+                   现已补全为 "onClick={}"。
+                */
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
