@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -13,16 +13,6 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 默认数字人配置
-const DEFAULT_TARGET_AVATAR: any = { 
-  avatar_id: 'KW3VZF-FccCBAuAZmEws8',
-  name: 'dgdavatar',
-  url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
-  available: true,
-  from: 1, 
-  type: 2  
-};
-
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   avatarId,
@@ -36,45 +26,35 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 初始化设置默认值
-  useEffect(() => {
-    if (!avatarId) {
-      logger.info('Initializing default avatar', { avatarId: DEFAULT_TARGET_AVATAR.avatar_id });
-      setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
-      setAvatarVideoUrl(DEFAULT_TARGET_AVATAR.url);
-    }
-
-    const exists = avatars.find(a => a.avatar_id === DEFAULT_TARGET_AVATAR.avatar_id);
-    if (!exists) {
-      setAvatars([DEFAULT_TARGET_AVATAR, ...avatars]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
-
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
 
     setIsRefreshing(true);
     try {
       const avatarList = await api.getAvatarList();
-      
-      const isDefaultInList = avatarList.find((a: Avatar) => a.avatar_id === DEFAULT_TARGET_AVATAR.avatar_id);
-      
-      let finalList = avatarList;
-      if (!isDefaultInList) {
-        finalList = [DEFAULT_TARGET_AVATAR, ...avatarList];
-      }
 
-      setAvatars(finalList);
+      // 定义特定的自定义数字人对象
+      // 使用 any 类型断言以避免因 Avatar 接口定义可能缺少 'type' 字段而导致的 TS 错误
+      const customAvatar: any = {
+        avatar_id: 'KW3VZF-FccCBAuAZmEws8',
+        name: 'dgdavatar',
+        url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
+        type: 24,
+        from: 1,
+        available: true,
+      };
+
+      // 将自定义数字人添加到列表头部
+      const updatedList = [customAvatar, ...avatarList];
+      setAvatars(updatedList);
+
+      // 将其设置为默认选中
+      setAvatarId(customAvatar.avatar_id);
+      setAvatarVideoUrl(customAvatar.url);
+      logger.info('Set default custom avatar', { url: customAvatar.url });
 
       setRefreshCooldown(true);
       setTimeout(() => setRefreshCooldown(false), 5000);
-      
-      if (!avatarId) {
-         setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
-         setAvatarVideoUrl(DEFAULT_TARGET_AVATAR.url);
-      }
-
     } catch (error) {
       logger.error('Error refreshing avatar list', { error });
     } finally {
@@ -110,7 +90,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     .filter((avatar) => avatar.from !== 3)
                     .map((avatar, index) => (
                       <option
-                        key={`${avatar.avatar_id}-${index}`}
+                        key={index}
                         value={avatar.avatar_id}
                         className={avatar.available ? 'available' : 'unavailable'}
                       >
@@ -123,7 +103,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     .filter((avatar) => avatar.from === 3)
                     .map((avatar, index) => (
                       <option
-                        key={`${avatar.avatar_id}-${index}`}
+                        key={index}
                         value={avatar.avatar_id}
                         className={avatar.available ? 'available' : 'unavailable'}
                       >
@@ -133,8 +113,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
-                // 修改点：使用匿名函数包裹调用，确保语法被重新识别
-                onClick={() => refreshAvatarList()}
+                onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
                 title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
