@@ -26,32 +26,39 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
+  // Define the custom avatar object with the required properties
+  const customAvatar = {
+    avatar_id: 'KW3VZF-FccCBAuAZmEws8',
+    name: 'dgdavatar',
+    url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
+    type: 24,
+    from: 1,
+    available: true,
+  };
+
+  // Effect to handle initialization: Inject custom avatar and set default selection
+  React.useEffect(() => {
+    // 1. Ensure the custom avatar is in the list
+    const exists = avatars.some((a) => a.avatar_id === customAvatar.avatar_id);
+    if (!exists) {
+      setAvatars([customAvatar as unknown as Avatar, ...avatars]);
+    }
+
+    // 2. Set as default if no avatar is currently selected
+    if (!avatarId) {
+      setAvatarId(customAvatar.avatar_id);
+      setAvatarVideoUrl(customAvatar.url);
+    }
+  }, [avatars, avatarId, setAvatars, setAvatarId, setAvatarVideoUrl, customAvatar]);
+
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
 
     setIsRefreshing(true);
     try {
       const avatarList = await api.getAvatarList();
-
-      // 手动添加自定义数字人对象
-      // 使用 any 类型断言以防止因 ApiService 类型定义差异导致的 TS 错误
-      const customAvatar: any = {
-        avatar_id: 'KW3VZF-FccCBAuAZmEws8',
-        name: 'dgdavatar',
-        url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
-        type: 24, // 对应 Type
-        from: 1,  // 对应 URL From
-        available: true,
-      };
-
-      // 将自定义数字人插入到列表的最前面
-      const updatedList = [customAvatar, ...avatarList];
-      setAvatars(updatedList);
-
-      // 逻辑核心：立即设置为默认选中
-      setAvatarId(customAvatar.avatar_id);
-      setAvatarVideoUrl(customAvatar.url);
-      logger.info('Set default custom avatar', { url: customAvatar.url });
+      // Prepend the custom avatar to the fetched list
+      setAvatars([customAvatar as unknown as Avatar, ...avatarList]);
 
       setRefreshCooldown(true);
       setTimeout(() => setRefreshCooldown(false), 5000);
@@ -112,7 +119,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
               </select>
-              {/* 修复了此处原来的语法错误 onClick= */}
               <button
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
