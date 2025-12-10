@@ -13,6 +13,7 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
+// 默认数字人配置
 const DEFAULT_TARGET_AVATAR: any = { 
   avatar_id: 'KW3VZF-FccCBAuAZmEws8',
   name: 'dgdavatar',
@@ -35,6 +36,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
+  // 初始化设置默认值
   useEffect(() => {
     if (!avatarId) {
       logger.info('Initializing default avatar', { avatarId: DEFAULT_TARGET_AVATAR.avatar_id });
@@ -131,7 +133,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 </optgroup>
               </select>
               <button
-                onClick={}
+                // 修改点：使用匿名函数包裹调用，确保语法被重新识别
+                onClick={() => refreshAvatarList()}
                 disabled={isRefreshing || refreshCooldown || disabled}
                 className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
                 title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
