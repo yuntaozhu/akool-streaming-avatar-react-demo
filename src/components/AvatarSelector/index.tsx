@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar, ApiService } from '../../apiService';
 import { logger } from '../../core/Logger';
 import './styles.css';
@@ -13,6 +13,16 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
+// Define the custom avatar constant
+const CUSTOM_AVATAR = {
+  avatar_id: 'KW3VZF-FccCBAuAZmEws8',
+  name: 'dgdavatar',
+  url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
+  type: 24,
+  from: 1,
+  available: true,
+};
+
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   avatarId,
@@ -26,30 +36,21 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // Define the custom avatar object with the required properties
-  const customAvatar = {
-    avatar_id: 'KW3VZF-FccCBAuAZmEws8',
-    name: 'dgdavatar',
-    url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
-    type: 24,
-    from: 1,
-    available: true,
-  };
-
-  // Effect to handle initialization: Inject custom avatar and set default selection
-  React.useEffect(() => {
-    // 1. Ensure the custom avatar is in the list
-    const exists = avatars.some((a) => a.avatar_id === customAvatar.avatar_id);
+  // Initialize: Inject custom avatar and set as default if nothing selected
+  useEffect(() => {
+    // 1. Inject Custom Avatar if missing
+    const exists = avatars.some((a) => a.avatar_id === CUSTOM_AVATAR.avatar_id);
     if (!exists) {
-      setAvatars([customAvatar as unknown as Avatar, ...avatars]);
+      // Cast to unknown then to Avatar to satisfy type checker if strict
+      setAvatars([CUSTOM_AVATAR as unknown as Avatar, ...avatars]);
     }
 
-    // 2. Set as default if no avatar is currently selected
+    // 2. Set Default Selection
     if (!avatarId) {
-      setAvatarId(customAvatar.avatar_id);
-      setAvatarVideoUrl(customAvatar.url);
+      setAvatarId(CUSTOM_AVATAR.avatar_id);
+      setAvatarVideoUrl(CUSTOM_AVATAR.url);
     }
-  }, [avatars, avatarId, setAvatars, setAvatarId, setAvatarVideoUrl, customAvatar]);
+  }, [avatars, avatarId, setAvatars, setAvatarId, setAvatarVideoUrl]);
 
   const refreshAvatarList = async () => {
     if (!api || isRefreshing || refreshCooldown) return;
@@ -57,8 +58,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     setIsRefreshing(true);
     try {
       const avatarList = await api.getAvatarList();
-      // Prepend the custom avatar to the fetched list
-      setAvatars([customAvatar as unknown as Avatar, ...avatarList]);
+      // Ensure custom avatar is preserved/added after refresh
+      setAvatars([CUSTOM_AVATAR as unknown as Avatar, ...avatarList]);
 
       setRefreshCooldown(true);
       setTimeout(() => setRefreshCooldown(false), 5000);
