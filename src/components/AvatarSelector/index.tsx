@@ -24,7 +24,7 @@ const CUSTOM_AVATAR = {
 };
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
-  api,
+  // api, // Removed from destructuring to fix TS6133 (unused variable)
   avatarId,
   setAvatarId,
   avatars,
