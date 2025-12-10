@@ -13,8 +13,6 @@ interface AvatarSelectorProps {
   disabled?: boolean;
 }
 
-// 1. 定义默认数字人配置
-// 使用 any 绕过类型检查，防止 Avatar 接口定义不一致导致的 TS 错误
 const DEFAULT_TARGET_AVATAR: any = { 
   avatar_id: 'KW3VZF-FccCBAuAZmEws8',
   name: 'dgdavatar',
@@ -37,16 +35,13 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshCooldown, setRefreshCooldown] = useState(false);
 
-  // 2. 初始化逻辑：组件加载时设置默认选中
   useEffect(() => {
-    // 只有当当前没有选中的 ID 时，才强制设置为默认值
     if (!avatarId) {
       logger.info('Initializing default avatar', { avatarId: DEFAULT_TARGET_AVATAR.avatar_id });
       setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
       setAvatarVideoUrl(DEFAULT_TARGET_AVATAR.url);
     }
 
-    // 检查列表是否包含该默认头像，如果不包含则添加
     const exists = avatars.find(a => a.avatar_id === DEFAULT_TARGET_AVATAR.avatar_id);
     if (!exists) {
       setAvatars([DEFAULT_TARGET_AVATAR, ...avatars]);
@@ -61,12 +56,10 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     try {
       const avatarList = await api.getAvatarList();
       
-      // 3. 刷新逻辑：确保 API 返回列表后，默认值不被覆盖丢失
       const isDefaultInList = avatarList.find((a: Avatar) => a.avatar_id === DEFAULT_TARGET_AVATAR.avatar_id);
       
       let finalList = avatarList;
       if (!isDefaultInList) {
-        // 手动合并默认头像到列表头部
         finalList = [DEFAULT_TARGET_AVATAR, ...avatarList];
       }
 
@@ -75,7 +68,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       setRefreshCooldown(true);
       setTimeout(() => setRefreshCooldown(false), 5000);
       
-      // 再次确保护底：如果刷新后 ID 变空了，重新选中默认值
       if (!avatarId) {
          setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
          setAvatarVideoUrl(DEFAULT_TARGET_AVATAR.url);
@@ -138,8 +130,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                     ))}
                 </optgroup>
               </select>
-              
-              {/* 这里是修复的关键点，请确认这一行代码与下面完全一致 */}
               <button
                 onClick={}
                 disabled={isRefreshing || refreshCooldown || disabled}
