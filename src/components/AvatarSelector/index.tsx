@@ -34,21 +34,21 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       const avatarList = await api.getAvatarList();
 
       // 定义特定的自定义数字人对象
-      // 使用 any 断言是为了防止 ApiService 中定义的 Avatar 类型可能缺少某些字段（如 type）导致 TS 报错
+      // 使用 any 类型断言以防止因 Avatar 接口定义差异导致的 TS 错误
       const customAvatar: any = {
         avatar_id: 'KW3VZF-FccCBAuAZmEws8',
         name: 'dgdavatar',
         url: 'https://drz0f01yeq1cx.cloudfront.net/1764832345393-39b9ea6e-5850-479f-908c-6a7d26b36489-3511.mp4',
-        type: 24, // 对应要求中的 Type: 24
-        from: 1,  // 对应要求中的 URL From: 1
+        type: 24, // 对应 Type: 24
+        from: 1,  // 对应 URL From: 1
         available: true,
       };
 
-      // 将自定义数字人插入到列表的最前面
+      // 将自定义数字人添加到列表头部
       const updatedList = [customAvatar, ...avatarList];
       setAvatars(updatedList);
 
-      // 设置为默认选中状态
+      // 立即将其设置为默认选中
       setAvatarId(customAvatar.avatar_id);
       setAvatarVideoUrl(customAvatar.url);
       logger.info('Set default custom avatar', { url: customAvatar.url });
