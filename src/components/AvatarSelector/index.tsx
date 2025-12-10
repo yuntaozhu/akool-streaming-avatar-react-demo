@@ -38,7 +38,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
   // 2. 初始化逻辑：组件加载时设置默认选中
   useEffect(() => {
-    // 如果当前没有 ID，设置为默认值
+    // 如果没有 ID，设置默认值
     if (!avatarId) {
       logger.info('Initializing default avatar', { avatarId: DEFAULT_TARGET_AVATAR.avatar_id });
       setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
@@ -60,12 +60,11 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     try {
       const avatarList = await api.getAvatarList();
       
-      // 3. 刷新逻辑：确保 API 返回列表后，默认值不被覆盖丢失
+      // 3. 刷新逻辑：确保默认值不丢失
       const isDefaultInList = avatarList.find((a: Avatar) => a.avatar_id === DEFAULT_TARGET_AVATAR.avatar_id);
       
       let finalList = avatarList;
       if (!isDefaultInList) {
-        // 手动合并默认头像
         finalList = [DEFAULT_TARGET_AVATAR, ...avatarList];
       }
 
@@ -74,7 +73,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       setRefreshCooldown(true);
       setTimeout(() => setRefreshCooldown(false), 5000);
       
-      // 再次确保护底：如果刷新后 ID 变空了，重新选中默认值
+      // 再次确保护底
       if (!avatarId) {
          setAvatarId(DEFAULT_TARGET_AVATAR.avatar_id);
          setAvatarVideoUrl(DEFAULT_TARGET_AVATAR.url);
