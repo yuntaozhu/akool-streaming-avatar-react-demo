@@ -33,8 +33,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   disabled = false,
 }) => {
   const [useManualAvatarId, setUseManualAvatarId] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshCooldown, setRefreshCooldown] = useState(false);
 
   // Initialize: Inject custom avatar and set as default if nothing selected
   useEffect(() => {
@@ -52,24 +50,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   }, [avatars, avatarId, setAvatars, setAvatarId, setAvatarVideoUrl]);
 
-  const refreshAvatarList = async () => {
-    if (!api || isRefreshing || refreshCooldown) return;
-
-    setIsRefreshing(true);
-    try {
-      const avatarList = await api.getAvatarList();
-      // Ensure custom avatar is preserved/added after refresh
-      setAvatars([CUSTOM_AVATAR as unknown as Avatar, ...avatarList]);
-
-      setRefreshCooldown(true);
-      setTimeout(() => setRefreshCooldown(false), 5000);
-    } catch (error) {
-      logger.error('Error refreshing avatar list', { error });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   const handleAvatarChange = (newAvatarId: string) => {
     setAvatarId(newAvatarId);
     const avatar = avatars.find((a) => a.avatar_id === newAvatarId);
@@ -85,50 +65,40 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         Avatar:
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {!useManualAvatarId ? (
-            <>
-              <select
-                value={avatarId}
-                onChange={(e) => handleAvatarChange(e.target.value)}
-                disabled={!avatars.length || disabled}
-                className="avatar-select"
-              >
-                <option value="">Select an avatar</option>
-                <optgroup label="Official Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from !== 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-                <optgroup label="Custom Avatars">
-                  {avatars
-                    .filter((avatar) => avatar.from === 3)
-                    .map((avatar, index) => (
-                      <option
-                        key={index}
-                        value={avatar.avatar_id}
-                        className={avatar.available ? 'available' : 'unavailable'}
-                      >
-                        {avatar.available ? '🟢' : '🔴'} {avatar.name}
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-              <button
-                onClick={}
-                disabled={isRefreshing || refreshCooldown || disabled}
-                className={`icon-button ${isRefreshing || refreshCooldown || disabled ? 'disabled' : ''}`}
-                title={refreshCooldown ? 'Please wait before refreshing again' : 'Refresh avatar list'}
-              >
-                <span className={`material-icons ${isRefreshing ? 'spinning' : ''}`}>refresh</span>
-              </button>
-            </>
+            <select
+              value={avatarId}
+              onChange={(e) => handleAvatarChange(e.target.value)}
+              disabled={!avatars.length || disabled}
+              className="avatar-select"
+            >
+              <option value="">Select an avatar</option>
+              <optgroup label="Official Avatars">
+                {avatars
+                  .filter((avatar) => avatar.from !== 3)
+                  .map((avatar, index) => (
+                    <option
+                      key={index}
+                      value={avatar.avatar_id}
+                      className={avatar.available ? 'available' : 'unavailable'}
+                    >
+                      {avatar.available ? '🟢' : '🔴'} {avatar.name}
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="Custom Avatars">
+                {avatars
+                  .filter((avatar) => avatar.from === 3)
+                  .map((avatar, index) => (
+                    <option
+                      key={index}
+                      value={avatar.avatar_id}
+                      className={avatar.available ? 'available' : 'unavailable'}
+                    >
+                      {avatar.available ? '🟢' : '🔴'} {avatar.name}
+                    </option>
+                  ))}
+              </optgroup>
+            </select>
           ) : (
             <input
               type="text"
