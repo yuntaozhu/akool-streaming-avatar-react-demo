@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 
-// 接口定义，满足父组件传参的类型检查
+// 接口定义
 interface AvatarSelectorProps {
   api: any;
   avatarId: string;
   setAvatarId: (avatarId: string) => void;
-  avatars: any[]; // 这里定义了 avatars
+  avatars: any[];
   setAvatars: any;
   setAvatarVideoUrl?: any;
   disabled?: boolean;
-  // 支持父组件单独管理 knowledgeId
   setKnowledgeId?: (id: string) => void;
 }
 
@@ -17,12 +16,11 @@ interface AvatarSelectorProps {
 const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
 
 /**
- * 2. 卢沟π狮 知识库完整配置
- * 修复：移除了 urls 中的 OneDrive 链接，因为那是网页而非文件，API 无法抓取会导致失败。
- * 仅保留 docs 中的 PDF 直链。
+ * 2. 卢沟π狮 知识库配置
+ * 使用 Akool V4 接口规范
  */
 export const PI_LION_KB_DATA = {
-  name: "卢沟π狮_KB_v1", // 名字可以唯一化，避免重复
+  name: "卢沟π狮_KB_Final",
   prologue: "你是一个数字人，名字叫卢沟π狮。 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。 你用你的“智慧眼”看待世界，让一切都变得有趣且清晰。",
   prompt: `你是一个数字人角色，名字叫π狮，来自卢沟桥。
 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。
@@ -42,14 +40,17 @@ export const PI_LION_KB_DATA = {
       size: 1024000
     }
   ],
-  // urls: [] // 暂时留空，OneDrive 链接通常会导致 API 抓取失败
+  // 按照您的示例代码，保留 urls 字段，可以是相关帮助文档链接
+  urls: [
+    "https://docs.akool.com/ai-tools-suite/knowledge-base"
+  ]
 };
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   setAvatarId,
   avatarId,
-  avatars, // 现在我们在代码中使用了这个变量，TS 报错会消失
+  avatars,
   setAvatars,
   disabled,
   setKnowledgeId
@@ -66,12 +67,23 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   }, [avatarId, setAvatarId]);
 
-  // 逻辑2：检查并初始化知识库
+  // 逻辑2：检查并初始化知识库 (使用 fetch)
   useEffect(() => {
     const initKnowledgeBase = async () => {
+      // 1. 基础检查
       if (!api || initRef.current) return;
       
-      // 检查 avatars 列表中是否已经存在该角色的 knowledge_id (避免重复创建)
+      // 2. 尝试从 api 对象中获取 Token
+      // AkoolApi 类通常将 key 存储在 apiKey 或 token 属性中
+      // 我们使用 (api as any) 绕过 TS 检查，以防属性是私有的
+      const token = (api as any).apiKey || (api as any).token;
+
+      if (!token) {
+        console.warn("[AvatarSelector] 等待 API Token...");
+        return; // Token 可能还没准备好，等待下一次渲染
+      }
+
+      // 3. 检查是否已经存在 knowledge_id，避免重复创建
       if (avatars && avatars.length > 0) {
         const targetAvatar = avatars.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
         if (targetAvatar && targetAvatar.knowledge_id) {
@@ -86,32 +98,53 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
       initRef.current = true;
       setKbStatus('loading');
-      console.log("[AvatarSelector] 开始调用 Akool API 创建知识库...");
+      console.log("[AvatarSelector] 开始创建知识库 (Fetch Mode)...");
 
       try {
-        // 调用 Akool V4 接口
-        const response = await api.post('/api/open/v4/knowledge/create', PI_LION_KB_DATA);
-        
-        console.log("[AvatarSelector] API 响应:", response.data);
+        // 4. 构建请求头 (参照您的示例代码)
+        const myHeaders = new Headers();
+        // 如果您的 Token 是 API Key 格式，通常使用 Authorization: Bearer
+        // 如果 Akool V4 明确要求 x-api-key，可以取消下面注释的切换
+        myHeaders.append("Authorization", `Bearer ${token}`); 
+        // myHeaders.append("x-api-key", token); // 备选方案
+        myHeaders.append("Content-Type", "application/json");
 
-        // 成功判断 (code 1000)
-        if (response.data && response.data.code === 1000 && response.data.data?._id) {
-          const newKbId = response.data.data._id;
+        const requestOptions: RequestInit = {
+          method: "POST",
+          headers: myHeaders,
+          body: JSON.stringify(PI_LION_KB_DATA),
+          redirect: "follow"
+        };
+
+        // 5. 发起请求 - 使用绝对 URL
+        const response = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", requestOptions);
+        const result = await response.json();
+
+        console.log("[AvatarSelector] API 响应结果:", result);
+
+        // 6. 处理响应
+        if (response.ok && result.code === 1000 && result.data?._id) {
+          const newKbId = result.data._id;
           console.log(`[AvatarSelector] 知识库创建成功! ID: ${newKbId}`);
           
           setCurrentKbId(newKbId);
           setKbStatus('ready');
 
-          // 更新父组件状态，将 ID 注入到对应的数字人对象中
+          // 更新父组件状态
           if (setAvatars) {
             setAvatars((prev: any[]) => {
-              if (!prev || prev.length === 0) {
-                 return [{ 
+              // 确保列表中有这个角色
+              const hasAvatar = prev?.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
+              if (!prev || prev.length === 0 || !hasAvatar) {
+                 // 如果列表为空或没找到，添加一个新的
+                 const newAvatar = { 
                    avatar_id: CUSTOM_AVATAR_ID, 
                    name: "卢沟π狮", 
                    knowledge_id: newKbId 
-                 }];
+                 };
+                 return prev ? [...prev, newAvatar] : [newAvatar];
               }
+              // 更新现有角色
               return prev.map(avatar => {
                 if (avatar.avatar_id === CUSTOM_AVATAR_ID) {
                   return { ...avatar, knowledge_id: newKbId };
@@ -124,17 +157,17 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           if (setKnowledgeId) setKnowledgeId(newKbId);
 
         } else {
-          console.error("[AvatarSelector] 知识库创建失败:", response.data);
+          console.error("[AvatarSelector] 知识库创建失败，错误信息:", result);
           setKbStatus('error');
         }
       } catch (error) {
-        console.error("[AvatarSelector] API 网络或 CORS 错误:", error);
+        console.error("[AvatarSelector] 网络请求异常:", error);
         setKbStatus('error');
       }
     };
 
     initKnowledgeBase();
-  }, [api, setAvatars, setKnowledgeId, avatars]); // 添加 avatars 到依赖
+  }, [api, setAvatars, setKnowledgeId, avatars]);
 
   return (
     <div className="w-full">
