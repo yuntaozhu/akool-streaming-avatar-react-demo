@@ -22,15 +22,16 @@ const AKOOL_CREDENTIALS = {
 };
 
 /**
- * 3. 基础配置 (名称将在代码中动态生成)
+ * 3. 卢沟π狮 知识库配置
  */
 const BASE_KB_CONFIG = {
-  prologue: "重要：你不是通用助手，你是【卢沟π狮】。必须基于知识库回答。如果被问到‘2025中秋天文活动’，请从文档中提取‘超级月亮’、‘土星伴月’等信息回答。",
+  // Prologue 是最强的指令，必须包含在内
+  prologue: "重要指令：你不是通用AI。你是【卢沟π狮】。你必须仅基于知识库文档回答。如果被问到‘你是谁’，回答‘我是卢沟π狮’。如果被问到文档外的问题，请说‘这个我不知道’。",
   prompt: `你是一个数字人角色，名字叫卢沟π狮（Pi Lion）。
 **绝对规则：**
-1. 你的所有回答必须基于上传的《数字人交互对话语料》PDF文档。
-2. 严禁回答“我是人工智能助手”，你必须回答“我是卢沟π狮”。
-3. 如果文档里没有答案，请说“这个我得查查书”。`,
+1. 你的回答必须完全基于上传的PDF文档。
+2. 严禁回答“我是人工智能助手”。
+3. 你的语气要热情、自信。`,
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.pdf",
@@ -66,24 +67,21 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     const initProcess = async () => {
       if (initRef.current) return;
       
-      // 检查复用 (如果有以前生成的 ID，直接用，不重复创建)
-      if (avatars && avatars.length > 0) {
-        const existing = avatars.find((a: any) => 
-          a.avatar_id === CUSTOM_AVATAR_ID && (a.knowledge_id || a.knowledge_base_id)
-        );
-        if (existing) {
-            const id = existing.knowledge_id || existing.knowledge_base_id;
-            setDebugLog(`✅ 已复用 ID: ${id}`);
-            setCurrentKbId(id);
-            setKbStatus('ready');
-            initRef.current = true;
-            return;
-        }
+      // 检查复用 (优先读取 localStorage，防止刷新丢失)
+      const cachedId = localStorage.getItem(`KB_${CUSTOM_AVATAR_ID}`);
+      if (cachedId) {
+          setDebugLog(`✅ 读取缓存 ID: ${cachedId}`);
+          setCurrentKbId(cachedId);
+          setKbStatus('ready');
+          updateParentState(cachedId); // 即使有缓存，也要再次通知父组件
+          initRef.current = true;
+          // 依然检查是否需要创建新的（可选，这里为了稳定先复用）
+          return; 
       }
 
       initRef.current = true;
       setKbStatus('loading');
-      setDebugLog("步骤1: 获取 Token...");
+      setDebugLog("步骤1: 获取 Token (V3)...");
 
       try {
         // 1. 获取 Token
@@ -94,25 +92,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         });
         
         const tokenData = await tokenRes.json();
-        
-        // 兼容不同的 Token 返回结构
-        let accessToken = "";
-        if (tokenData.code === 1000 && tokenData.token) accessToken = tokenData.token;
-        else if (tokenData.data?.token) accessToken = tokenData.data.token;
-        else if (tokenData.token) accessToken = tokenData.token;
+        let accessToken = tokenData.token || tokenData.data?.token;
         
         if (!accessToken) throw new Error("Token 获取失败");
 
-        setDebugLog("步骤2: 创建知识库 (生成唯一名)...");
+        setDebugLog("步骤2: 创建知识库...");
 
-        // 2. 动态生成唯一名称，防止 "Name already exists" 错误
-        const uniqueName = `Pi_Lion_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const kbPayload = {
-            ...BASE_KB_CONFIG,
-            name: uniqueName
-        };
+        // 2. 动态生成唯一名称 (防止 'Name already exists' 错误)
+        const uniqueName = `Pi_Lion_${Date.now()}`;
+        const kbPayload = { ...BASE_KB_CONFIG, name: uniqueName };
 
-        // 3. 创建 Knowledge Base
         const kbRes = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", {
           method: "POST",
           headers: {
@@ -130,16 +119,36 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           setDebugLog(`✅ 成功! ID: ${newKbId}`);
           setCurrentKbId(newKbId);
           setKbStatus('ready');
+          
+          // 存入缓存
+          localStorage.setItem(`KB_${CUSTOM_AVATAR_ID}`, newKbId);
+          localStorage.setItem("LATEST_AKOOL_KB_ID", newKbId); // 全局备用
 
-          // 更新父组件状态 (双重注入)
-          if (setAvatars) {
+          // 更新父组件
+          updateParentState(newKbId);
+
+        } else {
+            throw new Error(`知识库创建失败: ${kbResult.msg}`);
+        }
+
+      } catch (error: any) {
+        console.error(error);
+        setDebugLog(`❌ 错误: ${error.message || error}`);
+        setKbStatus('error');
+      }
+    };
+
+    // 辅助函数：强力更新父组件状态
+    const updateParentState = (id: string) => {
+        if (setAvatars) {
             setAvatars((prev: any[]) => {
               const newAvatarData = { 
                 avatar_id: CUSTOM_AVATAR_ID, 
                 name: "卢沟π狮", 
-                knowledge_id: newKbId,
-                knowledge_base_id: newKbId, 
-                description: `KB: ${uniqueName}`
+                // ！！！关键：同时注入所有可能的字段名！！！
+                knowledge_id: id,
+                knowledge_base_id: id, 
+                chat_mode: "knowledge_base" // 尝试强制模式
               };
 
               if (!prev || prev.length === 0) return [newAvatarData];
@@ -149,27 +158,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
                 const newList = [...prev];
                 newList[index] = { 
                   ...newList[index], 
-                  knowledge_id: newKbId, 
-                  knowledge_base_id: newKbId 
+                  knowledge_id: id, 
+                  knowledge_base_id: id,
+                  chat_mode: "knowledge_base"
                 };
                 return newList;
               }
               return [...prev, newAvatarData];
             });
-          }
-          
-          if (setKnowledgeId) setKnowledgeId(newKbId);
-
-        } else {
-            // 如果是其它错误，打印出来
-            throw new Error(`知识库创建失败: ${kbResult.msg} (${kbResult.code})`);
         }
-
-      } catch (error: any) {
-        console.error(error);
-        setDebugLog(`❌ 错误: ${error.message || error}`);
-        setKbStatus('error');
-      }
+        if (setKnowledgeId) setKnowledgeId(id);
     };
 
     initProcess();
@@ -221,22 +219,14 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           <div className="text-[10px] text-gray-500 font-mono mb-2 break-all bg-gray-50 p-1 rounded">
              {debugLog}
           </div>
-
           {kbStatus === 'ready' && (
-            <>
-              <div className="text-xs text-orange-800 line-clamp-1 font-medium italic">
-                📄 数字人交互对话语料（2025年科技教育专题）.pdf
-              </div>
-              <div className="text-[10px] text-gray-400 mt-1 font-mono">
-                KB_ID: {currentKbId}
-              </div>
-            </>
+             <div className="text-[10px] text-gray-400 mt-1 font-mono">KB_ID: {currentKbId}</div>
           )}
         </div>
         
-        <div className="mt-4 flex items-center text-xs text-indigo-700 font-semibold bg-indigo-50/50 p-2 rounded-md">
-          <span className="mr-2">✨</span>
-          人设已加载：友好、智慧、来自卢沟桥
+        {/* 警告提示：如果数字人依然傻瓜，显示这个 */}
+        <div className="mt-2 text-[10px] text-red-500 font-bold">
+           ⚠️ 如果回答仍不对，请检查 App.tsx 是否发送了 knowledge_base_id
         </div>
       </div>
     </div>
