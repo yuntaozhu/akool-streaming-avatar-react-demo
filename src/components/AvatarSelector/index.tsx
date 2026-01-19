@@ -42,8 +42,8 @@ export const PI_LION_KB_DATA = {
 请确保你的回答始终保持这种友好、热情和亲切的语气。`,
   docs: [
     {
-      name: "数字人交互对话语料（2025年科技教育专题）.docx",
-      url: "https://1drv.ms/b/c/c655bc5b05fe812b/IQDz_arLHbemSLXFMOKh4EiNAfTXDY__-45LxAhzH0ZBX9s?e=yyha0i",
+      name: "数字人交互对话语料（2025年科技教育专题）.pdf",
+      url: "https://d5v2vcqcwe9y5.cloudfront.net/default/260119/6895c322a2c15d2d55d6a3d9/i575uiupbqm8.pdf",
       size: 1024000 // 文件预估大小
     }
   ],
