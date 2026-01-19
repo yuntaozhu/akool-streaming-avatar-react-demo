@@ -16,7 +16,6 @@ interface AvatarSelectorProps {
 const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
 
 // 2. 【核心凭证】根据你提供的截图填入
-// 注意：Akool 需要先用这两个换取 Token，不能直接用 Key
 const AKOOL_CREDENTIALS = {
   clientId: "cWFdsLqE7c2Dnd60dNKvtg==", 
   clientSecret: "d9Fgepd9nkGD2k380XiRxX0RT6VsNwue" 
@@ -26,7 +25,7 @@ const AKOOL_CREDENTIALS = {
  * 3. 卢沟π狮 知识库配置
  */
 export const PI_LION_KB_DATA = {
-  name: "Pi_Lion_Final_Auth_v2",
+  name: "Pi_Lion_Fixed_Final_v3", // 名字
   prologue: "你是一个数字人，名字叫卢沟π狮。你的性格热情、幽默且富有智慧。你必须严格基于知识库文档的内容回答问题。",
   prompt: `你是一个数字人角色，名字叫卢沟π狮（Pi Lion）。
 你的主要职责是作为一个AI智慧导师。
@@ -38,6 +37,7 @@ export const PI_LION_KB_DATA = {
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.pdf",
+      // 必须是有效的直链
       url: "https://d5v2vcqcwe9y5.cloudfront.net/default/260119/6895c322a2c15d2d55d6a3d9/i575uiupbqm8.pdf",
       size: 1024000
     }
@@ -87,8 +87,9 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       setDebugLog("步骤1: 正在获取 Access Token...");
 
       try {
-        // --- 第一步：获取 Token ---
-        const tokenRes = await fetch("https://openapi.akool.com/api/v1/token", {
+        // --- 第一步：获取 Token (使用修正后的 V3 接口) ---
+        // 注意：这里修正了 URL 为 /api/open/v3/token
+        const tokenRes = await fetch("https://openapi.akool.com/api/open/v3/token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(AKOOL_CREDENTIALS)
@@ -97,18 +98,24 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         const tokenData = await tokenRes.json();
         console.log("[AvatarSelector] Token 响应:", tokenData);
 
-        if (!tokenData.token) {
-           throw new Error(`获取 Token 失败: ${tokenData.msg || '未知错误'}`);
+        // Akool V3 接口通常返回 { code: 1000, data: { token: "..." } } 或直接返回 token 字段
+        // 我们做个兼容处理
+        let accessToken = "";
+        if (tokenData.token) {
+            accessToken = tokenData.token;
+        } else if (tokenData.data && tokenData.data.token) {
+            accessToken = tokenData.data.token;
+        } else {
+            throw new Error(`获取 Token 失败: ${tokenData.msg || JSON.stringify(tokenData)}`);
         }
 
-        const accessToken = tokenData.token;
         setDebugLog("步骤2: Token 获取成功，正在创建知识库...");
 
         // --- 第二步：创建知识库 ---
         const kbRes = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${accessToken}`, // 使用拿到的 Token
+            "Authorization": `Bearer ${accessToken}`, // 使用 Bearer Token
             "Content-Type": "application/json"
           },
           body: JSON.stringify(PI_LION_KB_DATA)
