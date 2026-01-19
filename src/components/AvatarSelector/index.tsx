@@ -185,4 +185,60 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
             </div>
             <div className="absolute -top-1 -right-1">
                <span className="flex h-4 w-4">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${kbStatus === 'ready' ? 'bg-gree
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${kbStatus === 'ready' ? 'bg-green-400' : 'bg-yellow-400'}`}></span>
+                <span className={`relative inline-flex rounded-full h-4 w-4 border-2 border-white ${kbStatus === 'ready' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-2">
+              <h3 className="text-base font-bold text-gray-900 truncate">
+                卢沟π狮 (Pi Lion)
+              </h3>
+              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-full border border-orange-200">
+                AI 智慧导师
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 font-mono mt-1">
+              ID: {CUSTOM_AVATAR_ID}
+            </p>
+          </div>
+        </div>
+        
+        <div className={`mt-4 p-3 rounded-lg border transition-colors ${
+           kbStatus === 'error' ? 'bg-red-50 border-red-200' : 'bg-white/50 border-orange-100'
+        }`}>
+          <div className="flex items-center justify-between text-[11px] mb-2">
+            <span className="text-gray-400 font-bold uppercase tracking-wider">知识库资源</span>
+            {kbStatus === 'ready' && <span className="text-green-600 font-medium">✅ 已连接</span>}
+            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">连接中...</span>}
+            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 失败</span>}
+          </div>
+          
+          <div className="text-[10px] text-gray-500 font-mono mb-2 break-all bg-gray-50 p-1 rounded">
+             {debugLog}
+          </div>
+
+          {kbStatus === 'ready' && (
+            <>
+              <div className="text-xs text-orange-800 line-clamp-1 font-medium italic">
+                📄 数字人交互对话语料（2025年科技教育专题）.pdf
+              </div>
+              <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                KB_ID: {currentKbId}
+              </div>
+            </>
+          )}
+        </div>
+        
+        <div className="mt-4 flex items-center text-xs text-indigo-700 font-semibold bg-indigo-50/50 p-2 rounded-md">
+          <span className="mr-2">✨</span>
+          人设已加载：友好、智慧、来自卢沟桥
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AvatarSelector;
