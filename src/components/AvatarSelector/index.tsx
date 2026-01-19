@@ -58,7 +58,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   setAvatarId,
   avatarId,
-  avatars,
+  // avatars, // <--- 已移除此行，解决 TS6133 报错
   setAvatars,
   disabled,
   setKnowledgeId
@@ -88,10 +88,9 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
       try {
         // 调用 Akool V4 接口创建知识库
-        // 注意：Akool 的知识库如果 name 相同通常会返回已存在的 ID 或创建新的，这里假定每次会话初始化一次
         const response = await api.post('/api/open/v4/knowledge/create', PI_LION_KB_DATA);
         
-        // 解析响应 (通常结构为 { code: 1000, data: { _id: "..." }, ... })
+        // 解析响应
         if (response.data && response.data.code === 1000 && response.data.data?._id) {
           const newKbId = response.data.data._id;
           console.log(`[AvatarSelector] 知识库连接成功! KB_ID: ${newKbId}`);
@@ -100,7 +99,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           setKbStatus('ready');
 
           // 【关键步骤】将 knowledge_id 注入到 avatars 列表中对应的角色对象里
-          // 这样父组件在调用 createSession 时，从 avatars 中获取当前角色信息时就能拿到 knowledge_id
           if (setAvatars) {
             setAvatars((prevAvatars: any[]) => {
               // 如果列表为空，至少创建一个包含当前 ID 的对象
