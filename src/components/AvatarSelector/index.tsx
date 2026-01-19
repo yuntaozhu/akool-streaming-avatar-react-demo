@@ -22,11 +22,9 @@ const AKOOL_CREDENTIALS = {
 };
 
 /**
- * 3. 卢沟π狮 知识库配置
+ * 3. 基础配置 (名称将在代码中动态生成)
  */
-export const PI_LION_KB_DATA = {
-  name: "Pi_Lion_Dual_Inject_v5", 
-  // Prologue 是最强的人设指令，Akool 会优先执行这里
+const BASE_KB_CONFIG = {
   prologue: "重要：你不是通用助手，你是【卢沟π狮】。必须基于知识库回答。如果被问到‘2025中秋天文活动’，请从文档中提取‘超级月亮’、‘土星伴月’等信息回答。",
   prompt: `你是一个数字人角色，名字叫卢沟π狮（Pi Lion）。
 **绝对规则：**
@@ -68,9 +66,8 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     const initProcess = async () => {
       if (initRef.current) return;
       
-      // 检查复用
+      // 检查复用 (如果有以前生成的 ID，直接用，不重复创建)
       if (avatars && avatars.length > 0) {
-        // 同时检查两种字段名
         const existing = avatars.find((a: any) => 
           a.avatar_id === CUSTOM_AVATAR_ID && (a.knowledge_id || a.knowledge_base_id)
         );
@@ -86,7 +83,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
       initRef.current = true;
       setKbStatus('loading');
-      setDebugLog("步骤1: 获取 Token (V3)...");
+      setDebugLog("步骤1: 获取 Token...");
 
       try {
         // 1. 获取 Token
@@ -106,16 +103,23 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         
         if (!accessToken) throw new Error("Token 获取失败");
 
-        setDebugLog("步骤2: 创建知识库...");
+        setDebugLog("步骤2: 创建知识库 (生成唯一名)...");
 
-        // 2. 创建 Knowledge Base
+        // 2. 动态生成唯一名称，防止 "Name already exists" 错误
+        const uniqueName = `Pi_Lion_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const kbPayload = {
+            ...BASE_KB_CONFIG,
+            name: uniqueName
+        };
+
+        // 3. 创建 Knowledge Base
         const kbRes = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify(PI_LION_KB_DATA)
+          body: JSON.stringify(kbPayload)
         });
 
         const kbResult = await kbRes.json();
@@ -127,23 +131,21 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           setCurrentKbId(newKbId);
           setKbStatus('ready');
 
-          // 【关键修复】更新父组件状态时，同时写入两个字段，防止字段名不匹配
+          // 更新父组件状态 (双重注入)
           if (setAvatars) {
             setAvatars((prev: any[]) => {
               const newAvatarData = { 
                 avatar_id: CUSTOM_AVATAR_ID, 
                 name: "卢沟π狮", 
-                // ！！！双重注入！！！
-                knowledge_id: newKbId,        // 方案 A
-                knowledge_base_id: newKbId,   // 方案 B (防止父组件用这个名字)
-                description: "已加载知识库: " + newKbId
+                knowledge_id: newKbId,
+                knowledge_base_id: newKbId, 
+                description: `KB: ${uniqueName}`
               };
 
               if (!prev || prev.length === 0) return [newAvatarData];
               
               const index = prev.findIndex((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
               if (index !== -1) {
-                // 深度合并
                 const newList = [...prev];
                 newList[index] = { 
                   ...newList[index], 
@@ -156,11 +158,11 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
             });
           }
           
-          // 如果父组件有 setKnowledgeId，也调用
           if (setKnowledgeId) setKnowledgeId(newKbId);
 
         } else {
-            throw new Error(`知识库创建失败: ${kbResult.msg}`);
+            // 如果是其它错误，打印出来
+            throw new Error(`知识库创建失败: ${kbResult.msg} (${kbResult.code})`);
         }
 
       } catch (error: any) {
