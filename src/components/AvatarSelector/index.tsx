@@ -15,22 +15,26 @@ interface AvatarSelectorProps {
 // 1. 指定数字人 ID：卢沟π狮
 const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
 
-// 2. 你的 API Key
-const FORCE_API_KEY = "d9Fgepd9nkGD2k380XiRxX0RT6VsNwue";
+// 2. 【核心凭证】根据你提供的截图填入
+// 注意：Akool 需要先用这两个换取 Token，不能直接用 Key
+const AKOOL_CREDENTIALS = {
+  clientId: "cWFdsLqE7c2Dnd60dNKvtg==", 
+  clientSecret: "d9Fgepd9nkGD2k380XiRxX0RT6VsNwue" 
+};
 
 /**
  * 3. 卢沟π狮 知识库配置
  */
 export const PI_LION_KB_DATA = {
-  name: "Pi_Lion_Fixed_Final",
-  prologue: "你是一个数字人，名字叫卢沟π狮。你的性格热情、幽默且富有智慧。你必须严格基于知识库文档的内容回答问题。如果文档里没有，就说不知道。",
+  name: "Pi_Lion_Final_Auth_v2",
+  prologue: "你是一个数字人，名字叫卢沟π狮。你的性格热情、幽默且富有智慧。你必须严格基于知识库文档的内容回答问题。",
   prompt: `你是一个数字人角色，名字叫卢沟π狮（Pi Lion）。
-你的主要职责是作为一个AI智慧导师，尤其在教育或解决问题的场景中。
+你的主要职责是作为一个AI智慧导师。
 
 **重要规则：**
 1. 必须优先检索上传的 PDF 文档回答问题。
-2. 你的语气要活泼、像个大哥哥。
-3. 如果用户问“你是谁”，必须回答“我是来自卢沟桥的π狮”。`,
+2. 如果文档里没有答案，请明确告知“这个知识点文档里没有提到”。
+3. 保持热情、像大哥哥一样的语调。`,
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.pdf",
@@ -49,7 +53,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   disabled,
   setKnowledgeId
 }) => {
-  // 状态管理
   const [kbStatus, setKbStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [currentKbId, setCurrentKbId] = useState<string>('');
   const [debugLog, setDebugLog] = useState<string>('准备初始化...');
@@ -62,16 +65,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   }, [avatarId, setAvatarId]);
 
-  // 核心逻辑：创建知识库
+  // 核心逻辑：获取 Token -> 创建知识库
   useEffect(() => {
-    const connectToAkool = async () => {
+    const initProcess = async () => {
       if (initRef.current) return;
       
-      // 检查复用
+      // 检查是否已有 ID (避免重复)
       if (avatars && avatars.length > 0) {
         const existing = avatars.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID && a.knowledge_id);
         if (existing) {
-            setDebugLog(`✅ 复用已有 ID: ${existing.knowledge_id}`);
+            setDebugLog(`✅ 已复用 ID: ${existing.knowledge_id}`);
             setCurrentKbId(existing.knowledge_id);
             setKbStatus('ready');
             initRef.current = true;
@@ -81,31 +84,42 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
 
       initRef.current = true;
       setKbStatus('loading');
-      setDebugLog("正在连接 (使用 x-api-key)...");
+      setDebugLog("步骤1: 正在获取 Access Token...");
 
       try {
-        // 【关键修正】使用 x-api-key 而不是 Authorization
-        const myHeaders = new Headers();
-        myHeaders.append("x-api-key", FORCE_API_KEY);
-        // 为了兼容性，也可以同时加上 Authorization，但 x-api-key 是文档要求的
-        myHeaders.append("Authorization", `Bearer ${FORCE_API_KEY}`); 
-        myHeaders.append("Content-Type", "application/json");
-
-        const requestOptions: RequestInit = {
+        // --- 第一步：获取 Token ---
+        const tokenRes = await fetch("https://openapi.akool.com/api/v1/token", {
           method: "POST",
-          headers: myHeaders,
-          body: JSON.stringify(PI_LION_KB_DATA),
-          redirect: "follow"
-        };
-
-        const response = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", requestOptions);
-        const result = await response.json();
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(AKOOL_CREDENTIALS)
+        });
         
-        console.log("[AvatarSelector] API 响应:", result);
+        const tokenData = await tokenRes.json();
+        console.log("[AvatarSelector] Token 响应:", tokenData);
 
-        if (response.ok && result.code === 1000 && result.data?._id) {
-          const newKbId = result.data._id;
-          setDebugLog(`✅ 连接成功! ID: ${newKbId}`);
+        if (!tokenData.token) {
+           throw new Error(`获取 Token 失败: ${tokenData.msg || '未知错误'}`);
+        }
+
+        const accessToken = tokenData.token;
+        setDebugLog("步骤2: Token 获取成功，正在创建知识库...");
+
+        // --- 第二步：创建知识库 ---
+        const kbRes = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`, // 使用拿到的 Token
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(PI_LION_KB_DATA)
+        });
+
+        const kbResult = await kbRes.json();
+        console.log("[AvatarSelector] KB 响应:", kbResult);
+
+        if (kbRes.ok && kbResult.code === 1000 && kbResult.data?._id) {
+          const newKbId = kbResult.data._id;
+          setDebugLog(`✅ 全部成功! KB_ID: ${newKbId}`);
           setCurrentKbId(newKbId);
           setKbStatus('ready');
 
@@ -130,19 +144,17 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           if (setKnowledgeId) setKnowledgeId(newKbId);
 
         } else {
-            // 详细错误处理
-            const msg = result.msg || "未知错误";
-            console.error("API Error:", result);
-            setDebugLog(`❌ 失败: ${msg} (Code: ${result.code})`);
-            setKbStatus('error');
+            throw new Error(`知识库创建失败: ${kbResult.msg} (Code: ${kbResult.code})`);
         }
-      } catch (error) {
-        setDebugLog(`❌ 网络/代码错误: ${error}`);
+
+      } catch (error: any) {
+        console.error(error);
+        setDebugLog(`❌ 错误: ${error.message || error}`);
         setKbStatus('error');
       }
     };
 
-    connectToAkool();
+    initProcess();
   }, [avatars, setAvatars, setKnowledgeId]);
 
   return (
@@ -178,18 +190,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           </div>
         </div>
         
-        {/* 状态与日志区 */}
         <div className={`mt-4 p-3 rounded-lg border transition-colors ${
            kbStatus === 'error' ? 'bg-red-50 border-red-200' : 'bg-white/50 border-orange-100'
         }`}>
           <div className="flex items-center justify-between text-[11px] mb-2">
             <span className="text-gray-400 font-bold uppercase tracking-wider">知识库资源</span>
             {kbStatus === 'ready' && <span className="text-green-600 font-medium">✅ 已连接</span>}
-            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">正在连接...</span>}
-            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 未连接</span>}
+            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">连接中...</span>}
+            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 失败</span>}
           </div>
           
-          {/* 调试日志 */}
           <div className="text-[10px] text-gray-500 font-mono mb-2 break-all bg-gray-50 p-1 rounded">
              {debugLog}
           </div>
