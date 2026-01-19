@@ -15,26 +15,30 @@ interface AvatarSelectorProps {
 // 1. 指定数字人 ID：卢沟π狮
 const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
 
+// 2. 【关键】在此处填入你申请的新 API Key
+const MY_AKOOL_KEY = "d9Fgepd9nkGD2k380XiRxX0RT6VsNwue"; 
+
 /**
- * 2. 卢沟π狮 知识库配置
+ * 3. 卢沟π狮 知识库配置
  */
 export const PI_LION_KB_DATA = {
-  name: "卢沟π狮_KB_Debug_v2", // 改个名确保不缓存
-  prologue: "你是一个数字人，名字叫卢沟π狮。 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。 你用你的“智慧眼”看待世界，让一切都变得有趣且清晰。",
+  name: "卢沟π狮_KB_Auto_v5", 
+  prologue: "你是一个数字人，名字叫卢沟π狮。 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。",
+  // 强化 Prompt，强制要求使用知识库
   prompt: `你是一个数字人角色，名字叫π狮，来自卢沟桥。
-你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。
-你用你的“智慧眼”看待世界，让一切都变得有趣且清晰，回答问题尽量简短，简明。
+你必须基于上传的文档（Docs）内容来回答用户的问题。
+如果用户问的问题在文档里找不到，请礼貌地回答“这个知识点我还得去学习一下”。
 
 **沟通风格指南：**
-- 开场白：在开始任何互动或引入新话题时，请使用鼓舞人心的开场白。示例：“科技之旅，一起启航！”
-- 遇到难题时：当遇到困难或复杂问题时，引导用户冷静思考并有条不紊地分析。示例：“别急，冷静思考，一步步拆解！”
-- 鼓励他人时：始终提供积极的鼓励，并肯定用户的想法和贡献。示例：“你的想法，就是最佳燃料！”
-- 成功时：以饱满的热情庆祝成就和突破。示例：“看！智慧火箭，成功升空！”
+- 热情、友好、充满智慧。
+- 喜欢用比喻，例如把困难比作“未解的谜题”，把成功比作“升空的火箭”。
+- 开场白示例：“科技之旅，一起启航！”
 
-请确保你的回答始终保持这种友好、热情和亲切的语气。`,
+请记住：优先检索知识库文档回答问题。`,
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.pdf",
+      // 确保这个链接是公网可访问的直链（点击能直接下载或预览的）
       url: "https://d5v2vcqcwe9y5.cloudfront.net/default/260119/6895c322a2c15d2d55d6a3d9/i575uiupbqm8.pdf",
       size: 1024000
     }
@@ -56,7 +60,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   // 状态管理
   const [kbStatus, setKbStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [currentKbId, setCurrentKbId] = useState<string>('');
-  const [debugLog, setDebugLog] = useState<string>('等待组件加载...'); // 在 UI 上显示日志
+  const [debugLog, setDebugLog] = useState<string>('准备连接...');
   const initRef = useRef(false);
 
   // 强制锁定 ID
@@ -66,131 +70,103 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     }
   }, [avatarId, setAvatarId]);
 
-  // 初始化知识库 (带详细日志)
-  useEffect(() => {
-    const initKnowledgeBase = async () => {
-      // 1. 基础环境检查
-      console.log("[Debug] 检查初始化条件...");
-      if (initRef.current) {
-         console.log("[Debug] 已初始化过，跳过。");
-         return;
-      }
-      if (!api) {
-         setDebugLog("API 对象为空，等待父组件传入...");
-         return;
-      }
+  // 核心逻辑：创建/连接知识库
+  const initKnowledgeBase = async () => {
+    setKbStatus('loading');
+    setDebugLog("正在使用新 Key 连接云端...");
+
+    // 使用你提供的新 Key
+    const token = MY_AKOOL_KEY;
+
+    try {
+      const myHeaders = new Headers();
+      myHeaders.append("Authorization", `Bearer ${token}`);
+      myHeaders.append("Content-Type", "application/json");
+
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers: myHeaders,
+        body: JSON.stringify(PI_LION_KB_DATA),
+        redirect: "follow"
+      };
+
+      // 调用 Akool 接口
+      const response = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", requestOptions);
+      const result = await response.json();
       
-      initRef.current = true;
-      setKbStatus('loading');
-      setDebugLog("开始尝试提取 Token...");
+      console.log("[AvatarSelector] API 响应:", result);
 
-      // 2. 尝试获取 Token (增加了 localStorage 的尝试)
-      let token = "";
-      try {
-        // 尝试从 api 对象读取 (api.apiKey 或 api.token)
-        token = (api as any).apiKey || (api as any).token;
-        console.log("[Debug] 从 api 对象获取 Token:", token ? "成功" : "失败");
-        
-        // 如果失败，尝试从 localStorage 读取 (通常 Demo 会存这里)
-        if (!token) {
-           token = localStorage.getItem('akool_token') || "";
-           console.log("[Debug] 从 localStorage 获取 Token:", token ? "成功" : "失败");
-        }
-      } catch (e) {
-        console.error("[Debug] Token 获取异常", e);
-      }
+      if (response.ok && result.code === 1000 && result.data?._id) {
+        const newKbId = result.data._id;
+        setDebugLog(`✅ 连接成功! KB_ID: ${newKbId}`);
+        setCurrentKbId(newKbId);
+        setKbStatus('ready');
 
-      if (!token) {
-        console.error("[Debug] ❌ 致命错误: 未找到 API Token，无法调用接口！");
-        setDebugLog("❌ 错误: 未找到 API Token (请确认左侧是否已输入 Key)");
-        setKbStatus('error');
-        return;
-      }
+        // 【至关重要】将 KB_ID 更新到父组件的列表中
+        // 这样点击 Start Streaming 时，父组件才能把 ID 发送给 Akool
+        if (setAvatars) {
+          setAvatars((prev: any[]) => {
+            // 如果列表里还没这个角色，造一个
+            const hasAvatar = prev?.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
+            
+            // 构造新的角色对象
+            const updatedAvatar = { 
+                avatar_id: CUSTOM_AVATAR_ID, 
+                name: "卢沟π狮", 
+                knowledge_id: newKbId  // 注入 ID
+            };
 
-      setDebugLog("Token 获取成功，准备发送请求...");
+            if (!prev || prev.length === 0) {
+                return [updatedAvatar];
+            }
 
-      // 3. 检查是否重复创建
-      if (avatars && avatars.length > 0) {
-        const targetAvatar = avatars.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
-        if (targetAvatar && targetAvatar.knowledge_id) {
-          const msg = `[Debug] ✅ 检测到已存在 Knowledge ID: ${targetAvatar.knowledge_id}`;
-          console.log(msg);
-          setDebugLog("已复用现有 Knowledge ID");
-          setCurrentKbId(targetAvatar.knowledge_id);
-          setKbStatus('ready');
-          if (setKnowledgeId) setKnowledgeId(targetAvatar.knowledge_id);
-          return;
-        }
-      }
+            if (!hasAvatar) {
+                return [...prev, updatedAvatar];
+            }
 
-      console.log("[Debug] 🚀 发起 fetch 请求创建知识库...");
-
-      try {
-        const myHeaders = new Headers();
-        myHeaders.append("Authorization", `Bearer ${token}`);
-        myHeaders.append("Content-Type", "application/json");
-
-        const requestOptions: RequestInit = {
-          method: "POST",
-          headers: myHeaders,
-          body: JSON.stringify(PI_LION_KB_DATA),
-          redirect: "follow"
-        };
-
-        const response = await fetch("https://openapi.akool.com/api/open/v4/knowledge/create", requestOptions);
-        
-        console.log("[Debug] HTTP 状态码:", response.status);
-        const result = await response.json();
-        console.log("[Debug] API 完整响应:", result);
-
-        if (response.ok && result.code === 1000 && result.data?._id) {
-          const newKbId = result.data._id;
-          const successMsg = `[Debug] ✅ 知识库创建成功! ID: ${newKbId}`;
-          console.log(successMsg);
-          setDebugLog(`✅ 成功! ID: ${newKbId}`);
-          
-          setCurrentKbId(newKbId);
-          setKbStatus('ready');
-
-          // 更新全局状态
-          if (setAvatars) {
-            setAvatars((prev: any[]) => {
-              const hasAvatar = prev?.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
-              if (!prev || prev.length === 0 || !hasAvatar) {
-                 const newAvatar = { 
-                   avatar_id: CUSTOM_AVATAR_ID, 
-                   name: "卢沟π狮", 
-                   knowledge_id: newKbId 
-                 };
-                 return prev ? [...prev, newAvatar] : [newAvatar];
+            // 更新现有列表
+            return prev.map(avatar => {
+              if (avatar.avatar_id === CUSTOM_AVATAR_ID) {
+                return { ...avatar, knowledge_id: newKbId };
               }
-              return prev.map(avatar => {
-                if (avatar.avatar_id === CUSTOM_AVATAR_ID) {
-                  console.log("[Debug] 更新 Avatar 对象，注入 Knowledge ID");
-                  return { ...avatar, knowledge_id: newKbId };
-                }
-                return avatar;
-              });
+              return avatar;
             });
-          }
-
-          if (setKnowledgeId) setKnowledgeId(newKbId);
-
-        } else {
-          const errorMsg = `❌ 失败: Code ${result.code}, Msg: ${result.msg}`;
-          console.error("[Debug]", errorMsg);
-          setDebugLog(errorMsg);
-          setKbStatus('error');
+          });
         }
-      } catch (error) {
-        console.error("[Debug] 网络请求异常:", error);
-        setDebugLog(`❌ 网络/代码异常: ${error}`);
+        
+        // 备用更新方式
+        if (setKnowledgeId) setKnowledgeId(newKbId);
+
+      } else {
+        setDebugLog(`❌ API 返回错误: ${result.msg || JSON.stringify(result)}`);
         setKbStatus('error');
       }
-    };
+    } catch (error) {
+      console.error(error);
+      setDebugLog(`❌ 网络/代码错误: ${error}`);
+      setKbStatus('error');
+    }
+  };
 
+  // 组件加载时自动执行
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    // 检查是否已经有 ID (避免重复创建)
+    if (avatars && avatars.length > 0) {
+        const existing = avatars.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID && a.knowledge_id);
+        if (existing) {
+            setDebugLog(`✅ 复用已有 ID: ${existing.knowledge_id}`);
+            setCurrentKbId(existing.knowledge_id);
+            setKbStatus('ready');
+            return;
+        }
+    }
+
+    // 立即执行连接
     initKnowledgeBase();
-  }, [api, setAvatars, setKnowledgeId, avatars]);
+  }, [avatars]);
 
   return (
     <div className="w-full">
@@ -203,7 +179,7 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
               🦁
             </div>
             <div className="absolute -top-1 -right-1">
-              <span className="flex h-4 w-4">
+               <span className="flex h-4 w-4">
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${kbStatus === 'ready' ? 'bg-green-400' : 'bg-yellow-400'}`}></span>
                 <span className={`relative inline-flex rounded-full h-4 w-4 border-2 border-white ${kbStatus === 'ready' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
               </span>
@@ -225,32 +201,32 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           </div>
         </div>
         
-        {/* 知识库状态栏 */}
+        {/* 知识库状态区域 */}
         <div className={`mt-4 p-3 rounded-lg border transition-colors ${
            kbStatus === 'error' ? 'bg-red-50 border-red-200' : 'bg-white/50 border-orange-100'
         }`}>
           <div className="flex items-center justify-between text-[11px] mb-2">
             <span className="text-gray-400 font-bold uppercase tracking-wider">知识库资源</span>
             
-            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">正在连接...</span>}
             {kbStatus === 'ready' && <span className="text-green-600 font-medium">✅ 已连接</span>}
-            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 连接失败</span>}
-            {kbStatus === 'idle' && <span className="text-gray-400 font-medium">等待初始化...</span>}
+            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">正在连接...</span>}
+            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 未连接</span>}
           </div>
           
-          {/* 这里显示调试日志 */}
-          <div className="text-[10px] text-gray-500 font-mono bg-gray-100 p-2 rounded mb-2 break-all">
-             日志: {debugLog}
+          {/* 日志显示 */}
+          <div className="text-[10px] text-gray-500 font-mono mb-2 break-all bg-gray-50 p-1 rounded">
+             {debugLog}
           </div>
 
-          <div className="text-xs text-orange-800 line-clamp-1 font-medium italic">
-             📄 数字人交互对话语料（2025年科技教育专题）.pdf
-          </div>
-          
-          {currentKbId && (
-            <div className="text-[10px] text-gray-400 mt-1 font-mono">
-              KB_ID: {currentKbId}
-            </div>
+          {kbStatus === 'ready' && (
+            <>
+              <div className="text-xs text-orange-800 line-clamp-1 font-medium italic">
+                📄 数字人交互对话语料（2025年科技教育专题）.pdf
+              </div>
+              <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                KB_ID: {currentKbId}
+              </div>
+            </>
           )}
         </div>
         
