@@ -19,8 +19,8 @@ const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
  * 此配置用于调用 https://openapi.akool.com/api/open/v4/knowledge/create
  */
 export const PI_LION_KB_DATA = {
-  name: "卢沟π狮-科技教育知识库2025",
-  prologue: "科技之旅，一起启航！我是来自卢沟桥的π狮，准备好和我一起探索世界了吗？",
+  name: "卢沟π狮",
+  prologue: "你是一个数字人，名字叫卢沟π狮。 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。 你用你的“智慧眼”看待世界，让一切都变得有趣且清晰。",
   prompt: `你是一个数字人角色，名字叫π狮，来自卢沟桥。
 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。
 你用你的“智慧眼”看待世界，让一切都变得有趣且清晰，回答问题尽量简短，简明。
@@ -43,12 +43,12 @@ export const PI_LION_KB_DATA = {
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.docx",
-      url: "https://1drv.ms/w/c/c655bc5b05fe812b/IQDusIZTSVoCQYz0i8w17hIDAUHrhHhho9EKaAVxLRM9ETA?e=GLyxQU",
+      url: "https://1drv.ms/b/c/c655bc5b05fe812b/IQDz_arLHbemSLXFMOKh4EiNAfTXDY__-45LxAhzH0ZBX9s?e=yyha0i",
       size: 1024000 // 文件预估大小
     }
   ],
   urls: [
-    "https://1drv.ms/w/c/c655bc5b05fe812b/IQDusIZTSVoCQYz0i8w17hIDAUHrhHhho9EKaAVxLRM9ETA?e=GLyxQU" // 参考文档链接
+    "https://1drv.ms/b/c/c655bc5b05fe812b/IQDz_arLHbemSLXFMOKh4EiNAfTXDY__-45LxAhzH0ZBX9s?e=yyha0i" // 参考文档链接
   ]
 };
 
