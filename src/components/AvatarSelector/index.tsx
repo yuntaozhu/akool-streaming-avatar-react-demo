@@ -5,11 +5,11 @@ interface AvatarSelectorProps {
   api: any;
   avatarId: string;
   setAvatarId: (avatarId: string) => void;
-  avatars: any[];
+  avatars: any[]; // 这里定义了 avatars
   setAvatars: any;
   setAvatarVideoUrl?: any;
   disabled?: boolean;
-  // 新增：如果父组件支持单独设置 knowledgeId，可以使用此方法
+  // 支持父组件单独管理 knowledgeId
   setKnowledgeId?: (id: string) => void;
 }
 
@@ -17,11 +17,12 @@ interface AvatarSelectorProps {
 const CUSTOM_AVATAR_ID = "YmccSeRJRZ0ZwepqOUety";
 
 /**
- * 2. 卢沟π狮 知识库完整配置 (符合 Akool V4 API 规范)
- * 此配置用于调用 https://openapi.akool.com/api/open/v4/knowledge/create
+ * 2. 卢沟π狮 知识库完整配置
+ * 修复：移除了 urls 中的 OneDrive 链接，因为那是网页而非文件，API 无法抓取会导致失败。
+ * 仅保留 docs 中的 PDF 直链。
  */
 export const PI_LION_KB_DATA = {
-  name: "卢沟π狮",
+  name: "卢沟π狮_KB_v1", // 名字可以唯一化，避免重复
   prologue: "你是一个数字人，名字叫卢沟π狮。 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。 你用你的“智慧眼”看待世界，让一切都变得有趣且清晰。",
   prompt: `你是一个数字人角色，名字叫π狮，来自卢沟桥。
 你的主要职责是作为一个友好、智慧、且富有启发性的伙伴，尤其在教育或解决问题的场景中。
@@ -33,84 +34,85 @@ export const PI_LION_KB_DATA = {
 - 鼓励他人时：始终提供积极的鼓励，并肯定用户的想法和贡献。示例：“你的想法，就是最佳燃料！”
 - 成功时：以饱满的热情庆祝成就和突破。示例：“看！智慧火箭，成功升空！”
 
-**语音示例（展示对话风格）：**
-1. 讲解题目时（例如，对称概念）：
-  “瞧，这个图形像不像我的卷毛？转一下，对称的秘密就出现啦！”
-2. 加油助威时：
-  “加油！放飞你的思维纸飞机，冲刺高分云层！”
-3. 自我介绍时：
-  “嗨！我是来自卢沟桥的π狮！用我的‘智慧眼’看世界，一切都好玩又清晰！”
-
 请确保你的回答始终保持这种友好、热情和亲切的语气。`,
   docs: [
     {
       name: "数字人交互对话语料（2025年科技教育专题）.pdf",
       url: "https://d5v2vcqcwe9y5.cloudfront.net/default/260119/6895c322a2c15d2d55d6a3d9/i575uiupbqm8.pdf",
-      size: 1024000 // 文件预估大小
+      size: 1024000
     }
   ],
-  urls: [
-    "https://1drv.ms/b/c/c655bc5b05fe812b/IQDz_arLHbemSLXFMOKh4EiNAfTXDY__-45LxAhzH0ZBX9s?e=yyha0i" // 参考文档链接
-  ]
+  // urls: [] // 暂时留空，OneDrive 链接通常会导致 API 抓取失败
 };
 
 const AvatarSelector: React.FC<AvatarSelectorProps> = ({
   api,
   setAvatarId,
   avatarId,
-  // avatars, // <--- 已移除此行，解决 TS6133 报错
+  avatars, // 现在我们在代码中使用了这个变量，TS 报错会消失
   setAvatars,
   disabled,
   setKnowledgeId
 }) => {
-  // 状态管理：知识库加载状态
+  // 状态管理
   const [kbStatus, setKbStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [currentKbId, setCurrentKbId] = useState<string>('');
-  const initRef = useRef(false); // 防止重复调用
+  const initRef = useRef(false);
 
-  // 核心逻辑1：强制锁定 ID 为 卢沟π狮
+  // 逻辑1：强制锁定 ID
   useEffect(() => {
     if (avatarId !== CUSTOM_AVATAR_ID) {
-      console.log(`[AvatarSelector] 强制锁定卢沟π狮角色 ID: ${CUSTOM_AVATAR_ID}`);
       setAvatarId(CUSTOM_AVATAR_ID);
     }
   }, [avatarId, setAvatarId]);
 
-  // 核心逻辑2：调用 API 创建/连接知识库，并将 ID 回传给 Avatar 对象
+  // 逻辑2：检查并初始化知识库
   useEffect(() => {
     const initKnowledgeBase = async () => {
-      // 如果已经初始化过，或 API 实例不存在，则跳过
-      if (initRef.current || !api) return;
-      initRef.current = true;
+      if (!api || initRef.current) return;
+      
+      // 检查 avatars 列表中是否已经存在该角色的 knowledge_id (避免重复创建)
+      if (avatars && avatars.length > 0) {
+        const targetAvatar = avatars.find((a: any) => a.avatar_id === CUSTOM_AVATAR_ID);
+        if (targetAvatar && targetAvatar.knowledge_id) {
+          console.log(`[AvatarSelector] 检测到已存在 Knowledge ID: ${targetAvatar.knowledge_id}`);
+          setCurrentKbId(targetAvatar.knowledge_id);
+          setKbStatus('ready');
+          if (setKnowledgeId) setKnowledgeId(targetAvatar.knowledge_id);
+          initRef.current = true;
+          return;
+        }
+      }
 
+      initRef.current = true;
       setKbStatus('loading');
-      console.log("[AvatarSelector] 开始初始化知识库...");
+      console.log("[AvatarSelector] 开始调用 Akool API 创建知识库...");
 
       try {
-        // 调用 Akool V4 接口创建知识库
+        // 调用 Akool V4 接口
         const response = await api.post('/api/open/v4/knowledge/create', PI_LION_KB_DATA);
         
-        // 解析响应
+        console.log("[AvatarSelector] API 响应:", response.data);
+
+        // 成功判断 (code 1000)
         if (response.data && response.data.code === 1000 && response.data.data?._id) {
           const newKbId = response.data.data._id;
-          console.log(`[AvatarSelector] 知识库连接成功! KB_ID: ${newKbId}`);
+          console.log(`[AvatarSelector] 知识库创建成功! ID: ${newKbId}`);
           
           setCurrentKbId(newKbId);
           setKbStatus('ready');
 
-          // 【关键步骤】将 knowledge_id 注入到 avatars 列表中对应的角色对象里
+          // 更新父组件状态，将 ID 注入到对应的数字人对象中
           if (setAvatars) {
-            setAvatars((prevAvatars: any[]) => {
-              // 如果列表为空，至少创建一个包含当前 ID 的对象
-              if (!prevAvatars || prevAvatars.length === 0) {
+            setAvatars((prev: any[]) => {
+              if (!prev || prev.length === 0) {
                  return [{ 
                    avatar_id: CUSTOM_AVATAR_ID, 
                    name: "卢沟π狮", 
                    knowledge_id: newKbId 
                  }];
               }
-              // 否则更新列表中的目标角色
-              return prevAvatars.map(avatar => {
+              return prev.map(avatar => {
                 if (avatar.avatar_id === CUSTOM_AVATAR_ID) {
                   return { ...avatar, knowledge_id: newKbId };
                 }
@@ -119,23 +121,20 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
             });
           }
 
-          // 如果父组件传递了专门的 setKnowledgeId 方法，也调用它
-          if (setKnowledgeId) {
-            setKnowledgeId(newKbId);
-          }
+          if (setKnowledgeId) setKnowledgeId(newKbId);
 
         } else {
-          console.error("[AvatarSelector] 知识库创建失败，API 响应异常:", response.data);
+          console.error("[AvatarSelector] 知识库创建失败:", response.data);
           setKbStatus('error');
         }
       } catch (error) {
-        console.error("[AvatarSelector] 知识库 API 调用出错:", error);
+        console.error("[AvatarSelector] API 网络或 CORS 错误:", error);
         setKbStatus('error');
       }
     };
 
     initKnowledgeBase();
-  }, [api, setAvatars, setKnowledgeId]);
+  }, [api, setAvatars, setKnowledgeId, avatars]); // 添加 avatars 到依赖
 
   return (
     <div className="w-full">
@@ -143,7 +142,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
         disabled ? 'bg-gray-100 border-gray-200' : 'bg-gradient-to-br from-indigo-50 via-white to-orange-50 border-orange-200'
       }`}>
         <div className="flex items-center space-x-4">
-          {/* 角色图标：狮子形象装饰 */}
           <div className="relative">
             <div className="h-14 w-14 bg-gradient-to-tr from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-3xl shadow-md border-2 border-white">
               🦁
@@ -171,17 +169,16 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
           </div>
         </div>
         
-        {/* 知识库挂载提示 - 动态状态 */}
+        {/* 知识库状态栏 */}
         <div className={`mt-4 p-3 rounded-lg border transition-colors ${
            kbStatus === 'error' ? 'bg-red-50 border-red-200' : 'bg-white/50 border-orange-100'
         }`}>
           <div className="flex items-center justify-between text-[11px] mb-2">
             <span className="text-gray-400 font-bold uppercase tracking-wider">知识库资源</span>
             
-            {/* 状态显示 */}
-            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">正在连接云端...</span>}
-            {kbStatus === 'ready' && <span className="text-green-600 font-medium">✅ 已连接 (Ready)</span>}
-            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 连接失败</span>}
+            {kbStatus === 'loading' && <span className="text-orange-500 font-medium animate-pulse">正在连接...</span>}
+            {kbStatus === 'ready' && <span className="text-green-600 font-medium">✅ 已连接</span>}
+            {kbStatus === 'error' && <span className="text-red-500 font-medium">❌ 连接失败(请看控制台)</span>}
             {kbStatus === 'idle' && <span className="text-gray-400 font-medium">等待初始化...</span>}
           </div>
           
@@ -189,7 +186,6 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
              📄 数字人交互对话语料（2025年科技教育专题）.pdf
           </div>
           
-          {/* 显示当前的 Knowledge ID (调试用) */}
           {currentKbId && (
             <div className="text-[10px] text-gray-400 mt-1 font-mono">
               KB_ID: {currentKbId}
