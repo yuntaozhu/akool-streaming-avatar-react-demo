@@ -48,7 +48,7 @@ export const PI_LION_KB_DATA = {
     }
   ],
   urls: [
-    "https://docs.akool.com/ai-tools-suite/knowledge-base" // 参考文档链接
+    "https://1drv.ms/w/c/c655bc5b05fe812b/IQDusIZTSVoCQYz0i8w17hIDAUHrhHhho9EKaAVxLRM9ETA?e=GLyxQU" // 参考文档链接
   ]
 };
 
